@@ -46,6 +46,13 @@ func (ms *MemoryStore) Save(value string) string {
 	return key
 }
 
+func (ms *MemoryStore) Set(key, value string) {
+	ms.mutex.Lock()
+	defer ms.mutex.Unlock()
+
+	ms.storeMap[key] = value
+}
+
 func randomString(length int) string {
 	var arr = make([]byte, length)
 	for i := range arr {

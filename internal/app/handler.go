@@ -6,38 +6,30 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/aleffnull/shortener/internal/store"
+	"github.com/go-http-utils/headers"
+	"github.com/ldez/mimetype"
 )
 
-const (
-	contentTypeHeader = "Content-Type"
-	contentTypeValue  = "text/plain"
-
-	locationHeader = "Location"
-)
-
-var storage = store.NewMemoryStore()
-
-func HandleGetRequest(response http.ResponseWriter, request *http.Request) {
+func HandleGetRequest(response http.ResponseWriter, request *http.Request, shortener *ShortenerApp) {
 	key := strings.TrimPrefix(request.URL.Path, "/")
 	if len(key) == 0 {
 		http.Error(response, "Key is required", http.StatusBadRequest)
 		return
 	}
 
-	value, ok := storage.Load(key)
+	value, ok := shortener.GetURL(key)
 	if !ok {
 		http.Error(response, "Key was not found", http.StatusBadRequest)
 		return
 	}
 
-	response.Header().Set(locationHeader, value)
+	response.Header().Set(headers.Location, value)
 	response.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-func HandlePostRequest(response http.ResponseWriter, request *http.Request) {
-	if !strings.HasPrefix(request.Header.Get(contentTypeHeader), contentTypeValue) {
-		errorString := fmt.Sprintf("Only %v content type is allowed", contentTypeValue)
+func HandlePostRequest(response http.ResponseWriter, request *http.Request, shortener *ShortenerApp) {
+	if !strings.HasPrefix(request.Header.Get(headers.ContentType), mimetype.TextPlain) {
+		errorString := fmt.Sprintf("Only %v content type is allowed", mimetype.TextPlain)
 		http.Error(response, errorString, http.StatusBadRequest)
 		return
 	}
@@ -53,9 +45,9 @@ func HandlePostRequest(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	key := storage.Save(bodyStr)
+	key := shortener.SaveURL(bodyStr)
 
-	response.Header().Set(contentTypeHeader, contentTypeValue)
+	response.Header().Set(headers.ContentType, mimetype.TextPlain)
 	response.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(response, "http://localhost:8080/%v", key)
 }
