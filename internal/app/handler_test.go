@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/go-http-utils/headers"
-	"github.com/ldez/mimetype"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,29 +21,21 @@ func TestHandleGetRequest(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		request    string
+		key        string
 		hookBefore func(shortener *ShortenerApp)
 		want       want
 	}{
 		{
-			name:    "no key in URL",
-			request: "/",
+			name: "unknown key",
+			key:  "foo",
 			want: want{
 				statusCode: http.StatusBadRequest,
 				emptyBody:  false,
 			},
 		},
 		{
-			name:    "unknown key",
-			request: "/foo",
-			want: want{
-				statusCode: http.StatusBadRequest,
-				emptyBody:  false,
-			},
-		},
-		{
-			name:    "existing key",
-			request: "/foo",
+			name: "existing key",
+			key:  "foo",
 			hookBefore: func(shortener *ShortenerApp) {
 				shortener.SetKeyAndURL("foo", "http://bar.buz")
 			},
@@ -61,7 +52,6 @@ func TestHandleGetRequest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange.
-			request := httptest.NewRequest(http.MethodGet, tt.request, nil)
 			recorder := httptest.NewRecorder()
 			shortener := NewShortenerApp()
 			if tt.hookBefore != nil {
@@ -69,7 +59,7 @@ func TestHandleGetRequest(t *testing.T) {
 			}
 
 			// Act.
-			HandleGetRequest(recorder, request, shortener)
+			HandleGetRequest(recorder, tt.key, shortener)
 
 			// Assert.
 			result := recorder.Result()
@@ -100,29 +90,19 @@ func TestHandlePostRequest(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		contentType string
-		body        string
-		want        want
+		name string
+		body string
+		want want
 	}{
 		{
-			name:        "invalid content type",
-			contentType: mimetype.TextHTML,
+			name: "empty body",
 			want: want{
 				statusCode: http.StatusBadRequest,
 			},
 		},
 		{
-			name:        "empty body",
-			contentType: mimetype.TextPlain,
-			want: want{
-				statusCode: http.StatusBadRequest,
-			},
-		},
-		{
-			name:        "valid request",
-			contentType: mimetype.TextPlain,
-			body:        "http://foo.bar",
+			name: "valid request",
+			body: "http://foo.bar",
 			want: want{
 				statusCode:  http.StatusCreated,
 				validateURL: true,
@@ -134,7 +114,6 @@ func TestHandlePostRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange.
 			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
-			request.Header.Set(headers.ContentType, tt.contentType)
 			recorder := httptest.NewRecorder()
 			shortener := NewShortenerApp()
 
@@ -156,21 +135,4 @@ func TestHandlePostRequest(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestHandleInvalidMethod(t *testing.T) {
-	// Arrange.
-	recorder := httptest.NewRecorder()
-
-	// Act.
-	HandleInvalidMethod(recorder)
-
-	// Assert.
-	result := recorder.Result()
-	require.Equal(t, http.StatusBadRequest, result.StatusCode)
-
-	defer result.Body.Close()
-	body, err := io.ReadAll(result.Body)
-	require.NoError(t, err)
-	require.NotEmpty(t, body)
 }
