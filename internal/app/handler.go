@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/go-http-utils/headers"
 	"github.com/ldez/mimetype"
@@ -33,8 +34,13 @@ func HandlePostRequest(response http.ResponseWriter, request *http.Request, shor
 	}
 
 	key := shortener.SaveURL(bodyStr)
+	shortPath, err := url.JoinPath(shortener.GetBaseURL(), key)
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	response.Header().Set(headers.ContentType, mimetype.TextPlain)
 	response.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(response, "http://localhost:8080/%v", key)
+	fmt.Fprint(response, shortPath)
 }

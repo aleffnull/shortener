@@ -1,16 +1,24 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/aleffnull/shortener/internal/app"
+	"github.com/aleffnull/shortener/internal/config"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/ldez/mimetype"
 )
 
 func main() {
-	shortener := app.NewShortenerApp()
+	err := config.ParseFlags()
+	if err != nil {
+		panic("configuration error: " + err.Error())
+	}
+
+	fmt.Printf("Using configuration: %+v\n", config.Current)
+	shortener := app.NewShortenerApp(config.Current)
 
 	router := chi.NewRouter()
 	router.Use(middleware.AllowContentType(mimetype.TextPlain))
@@ -22,7 +30,7 @@ func main() {
 		app.HandlePostRequest(response, request, shortener)
 	})
 
-	err := http.ListenAndServe("localhost:8080", router)
+	err = http.ListenAndServe(config.Current.ServerAddress, router)
 	if err != nil {
 		panic(err)
 	}

@@ -1,17 +1,24 @@
 package app
 
 import (
+	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/store"
 )
 
 type ShortenerApp struct {
-	storage store.Store
+	configuration config.Configuration
+	storage       store.Store
 }
 
-func NewShortenerApp() *ShortenerApp {
+func NewShortenerApp(configuration config.Configuration) *ShortenerApp {
 	return &ShortenerApp{
-		storage: store.NewMemoryStore(),
+		configuration: configuration,
+		storage:       store.NewMemoryStore(),
 	}
+}
+
+func (shortener *ShortenerApp) GetBaseURL() string {
+	return shortener.configuration.BaseURL
 }
 
 func (shortener *ShortenerApp) GetURL(key string) (string, bool) {

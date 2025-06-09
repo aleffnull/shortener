@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aleffnull/shortener/internal/config"
 	"github.com/go-http-utils/headers"
 	"github.com/stretchr/testify/require"
 )
@@ -53,7 +54,8 @@ func TestHandleGetRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange.
 			recorder := httptest.NewRecorder()
-			shortener := NewShortenerApp()
+			configuration := config.Configuration{}
+			shortener := NewShortenerApp(configuration)
 			if tt.hookBefore != nil {
 				tt.hookBefore(shortener)
 			}
@@ -90,9 +92,10 @@ func TestHandlePostRequest(t *testing.T) {
 	}
 
 	tests := []struct {
-		name string
-		body string
-		want want
+		name    string
+		baseURL string
+		body    string
+		want    want
 	}{
 		{
 			name: "empty body",
@@ -101,8 +104,17 @@ func TestHandlePostRequest(t *testing.T) {
 			},
 		},
 		{
-			name: "valid request",
-			body: "http://foo.bar",
+			name:    "invalid base URL",
+			baseURL: ":localhost:8080",
+			body:    "http://foo.bar",
+			want: want{
+				statusCode: http.StatusInternalServerError,
+			},
+		},
+		{
+			name:    "valid request",
+			baseURL: "http://localhost:8080",
+			body:    "http://foo.bar",
 			want: want{
 				statusCode:  http.StatusCreated,
 				validateURL: true,
@@ -115,7 +127,10 @@ func TestHandlePostRequest(t *testing.T) {
 			// Arrange.
 			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
 			recorder := httptest.NewRecorder()
-			shortener := NewShortenerApp()
+			configuration := config.Configuration{
+				BaseURL: tt.baseURL,
+			}
+			shortener := NewShortenerApp(configuration)
 
 			// Act.
 			HandlePostRequest(recorder, request, shortener)
