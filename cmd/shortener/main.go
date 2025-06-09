@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	err := config.ParseFlags()
+	err := config.ParseConfiguration()
 	if err != nil {
 		panic("configuration error: " + err.Error())
 	}

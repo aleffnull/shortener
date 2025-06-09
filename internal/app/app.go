@@ -6,11 +6,11 @@ import (
 )
 
 type ShortenerApp struct {
-	configuration config.Configuration
+	configuration *config.Configuration
 	storage       store.Store
 }
 
-func NewShortenerApp(configuration config.Configuration) *ShortenerApp {
+func NewShortenerApp(configuration *config.Configuration) *ShortenerApp {
 	return &ShortenerApp{
 		configuration: configuration,
 		storage:       store.NewMemoryStore(),
