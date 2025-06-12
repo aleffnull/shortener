@@ -6,12 +6,25 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/aleffnull/shortener/internal/config"
 	"github.com/go-http-utils/headers"
 	"github.com/ldez/mimetype"
 )
 
-func HandleGetRequest(response http.ResponseWriter, key string, shortener *ShortenerApp) {
-	value, ok := shortener.GetURL(key)
+type Handler struct {
+	configuration *config.Configuration
+	shortenerApp  *ShortenerApp
+}
+
+func NewHandler(configuration *config.Configuration, shortenerApp *ShortenerApp) *Handler {
+	return &Handler{
+		configuration: configuration,
+		shortenerApp:  shortenerApp,
+	}
+}
+
+func (h *Handler) HandleGetRequest(response http.ResponseWriter, key string) {
+	value, ok := h.shortenerApp.GetURL(key)
 	if !ok {
 		http.Error(response, "Key was not found", http.StatusBadRequest)
 		return
@@ -21,7 +34,7 @@ func HandleGetRequest(response http.ResponseWriter, key string, shortener *Short
 	response.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-func HandlePostRequest(response http.ResponseWriter, request *http.Request, shortener *ShortenerApp) {
+func (h *Handler) HandlePostRequest(response http.ResponseWriter, request *http.Request) {
 	body, err := io.ReadAll(request.Body)
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
@@ -34,13 +47,13 @@ func HandlePostRequest(response http.ResponseWriter, request *http.Request, shor
 		return
 	}
 
-	key, err := shortener.SaveURL(bodyStr)
+	key, err := h.shortenerApp.SaveURL(bodyStr)
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	shortPath, err := url.JoinPath(shortener.GetBaseURL(), key)
+	shortPath, err := url.JoinPath(h.configuration.BaseURL, key)
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
 		return

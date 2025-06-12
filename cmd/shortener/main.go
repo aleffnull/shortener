@@ -18,16 +18,17 @@ func main() {
 	}
 
 	log.Printf("using configuration: %+v\n", configuration)
-	shortener := app.NewShortenerApp(configuration)
+	shortenerApp := app.NewShortenerApp()
+	handler := app.NewHandler(configuration, shortenerApp)
 
 	router := chi.NewRouter()
 	router.Use(middleware.AllowContentType(mimetype.TextPlain))
 	router.Get("/{key}", func(response http.ResponseWriter, request *http.Request) {
 		key := chi.URLParam(request, "key")
-		app.HandleGetRequest(response, key, shortener)
+		handler.HandleGetRequest(response, key)
 	})
 	router.Post("/", func(response http.ResponseWriter, request *http.Request) {
-		app.HandlePostRequest(response, request, shortener)
+		handler.HandlePostRequest(response, request)
 	})
 
 	err = http.ListenAndServe(configuration.ServerAddress, router)

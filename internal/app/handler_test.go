@@ -54,13 +54,14 @@ func TestHandleGetRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange.
 			recorder := httptest.NewRecorder()
-			shortener := NewShortenerApp(&config.Configuration{})
+			shortenerApp := NewShortenerApp()
+			handler := NewHandler(&config.Configuration{}, shortenerApp)
 			if tt.hookBefore != nil {
-				tt.hookBefore(shortener)
+				tt.hookBefore(shortenerApp)
 			}
 
 			// Act.
-			HandleGetRequest(recorder, tt.key, shortener)
+			handler.HandleGetRequest(recorder, tt.key)
 
 			// Assert.
 			result := recorder.Result()
@@ -129,10 +130,11 @@ func TestHandlePostRequest(t *testing.T) {
 			configuration := &config.Configuration{
 				BaseURL: tt.baseURL,
 			}
-			shortener := NewShortenerApp(configuration)
+			shortenerApp := NewShortenerApp()
+			handler := NewHandler(configuration, shortenerApp)
 
 			// Act.
-			HandlePostRequest(recorder, request, shortener)
+			handler.HandlePostRequest(recorder, request)
 
 			// Assert.
 			result := recorder.Result()
