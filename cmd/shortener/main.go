@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/aleffnull/shortener/internal/app"
@@ -12,13 +12,13 @@ import (
 )
 
 func main() {
-	err := config.ParseConfiguration()
+	configuration, err := config.GetConfiguration()
 	if err != nil {
-		panic("configuration error: " + err.Error())
+		log.Fatalf("configuration error: %v", err)
 	}
 
-	fmt.Printf("Using configuration: %+v\n", config.Current)
-	shortener := app.NewShortenerApp(config.Current)
+	log.Printf("using configuration: %+v\n", configuration)
+	shortener := app.NewShortenerApp(configuration)
 
 	router := chi.NewRouter()
 	router.Use(middleware.AllowContentType(mimetype.TextPlain))
@@ -30,8 +30,8 @@ func main() {
 		app.HandlePostRequest(response, request, shortener)
 	})
 
-	err = http.ListenAndServe(config.Current.ServerAddress, router)
+	err = http.ListenAndServe(configuration.ServerAddress, router)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to start server: %v", err)
 	}
 }

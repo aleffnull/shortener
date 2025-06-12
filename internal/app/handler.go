@@ -25,6 +25,7 @@ func HandlePostRequest(response http.ResponseWriter, request *http.Request, shor
 	body, err := io.ReadAll(request.Body)
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	bodyStr := string(body)
@@ -33,7 +34,12 @@ func HandlePostRequest(response http.ResponseWriter, request *http.Request, shor
 		return
 	}
 
-	key := shortener.SaveURL(bodyStr)
+	key, err := shortener.SaveURL(bodyStr)
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	shortPath, err := url.JoinPath(shortener.GetBaseURL(), key)
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)

@@ -26,7 +26,7 @@ func (shortener *ShortenerApp) GetURL(key string) (string, bool) {
 	return url, ok
 }
 
-func (shortener *ShortenerApp) SaveURL(url string) string {
+func (shortener *ShortenerApp) SaveURL(url string) (string, error) {
 	return shortener.storage.Save(url)
 }
 

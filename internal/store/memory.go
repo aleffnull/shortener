@@ -1,6 +1,8 @@
 package store
 
 import (
+	"errors"
+	"fmt"
 	"math/rand/v2"
 	"sync"
 )
@@ -13,8 +15,10 @@ type MemoryStore struct {
 var _ Store = &MemoryStore{}
 
 const (
-	alphabet     = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	lettersCount = 8
+	alphabet         = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	keyLength        = 8
+	keyMaxLength     = 100
+	keyMaxIterations = 10
 )
 
 func NewMemoryStore() Store {
@@ -31,19 +35,17 @@ func (ms *MemoryStore) Load(key string) (string, bool) {
 	return value, ok
 }
 
-func (ms *MemoryStore) Save(value string) string {
+func (ms *MemoryStore) Save(value string) (string, error) {
 	ms.mutex.Lock()
 	defer ms.mutex.Unlock()
 
-	var key string
-	exists := true
-	for exists {
-		key = randomString(lettersCount)
-		_, exists = ms.storeMap[key]
+	key, err := ms.getUniqueKey()
+	if err != nil {
+		return "", fmt.Errorf("failed to save value: %w", err)
 	}
 
 	ms.storeMap[key] = value
-	return key
+	return key, nil
 }
 
 func (ms *MemoryStore) Set(key, value string) {
@@ -60,4 +62,25 @@ func randomString(length int) string {
 	}
 
 	return string(arr)
+}
+
+func (ms *MemoryStore) getUniqueKey() (string, error) {
+	length := keyLength
+	i := 0
+
+	for length < keyMaxLength {
+		key := randomString(length)
+		_, exists := ms.storeMap[key]
+		if !exists {
+			return key, nil
+		}
+
+		i++
+		if i >= keyMaxIterations {
+			length *= 2
+			i = 0
+		}
+	}
+
+	return "", errors.New("failed to generate unique key")
 }

@@ -2,39 +2,40 @@ package config
 
 import (
 	"flag"
-	"net/url"
+	"fmt"
 
 	"github.com/caarlos0/env/v6"
+	"github.com/go-playground/validator/v10"
 	"github.com/samber/lo"
 )
 
 type Configuration struct {
-	ServerAddress string `env:"SERVER_ADDRESS"`
-	BaseURL       string `env:"BASE_URL"`
+	ServerAddress string `env:"SERVER_ADDRESS" validate:"required,hostname_port"`
+	BaseURL       string `env:"BASE_URL" validate:"required,url"`
 }
 
-var (
-	Current *Configuration
-)
-
-func ParseConfiguration() error {
+func GetConfiguration() (*Configuration, error) {
 	envConfig, err := parseEnvironment()
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to parse environment variables: %w", err)
 	}
 
 	flagConfig, err := parseFlags()
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to parse flags: %w", err)
 	}
 
-	Current = &Configuration{
+	configuration := &Configuration{
 		ServerAddress: lo.Ternary(len(envConfig.ServerAddress) > 0, envConfig.ServerAddress, flagConfig.ServerAddress),
 		BaseURL:       lo.Ternary(len(envConfig.BaseURL) > 0, envConfig.BaseURL, flagConfig.BaseURL),
 	}
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	err = validate.Struct(configuration)
+	if err != nil {
+		return nil, fmt.Errorf("configuration validation failed: %w", err)
+	}
 
-	_, err = url.ParseRequestURI(Current.BaseURL)
-	return err
+	return configuration, nil
 }
 
 func parseFlags() (*Configuration, error) {
