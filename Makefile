@@ -5,7 +5,7 @@ build:
 	go build -v -o=bin/shortener ./cmd/shortener/...
 
 run:
-	go run cmd/shortener/main.go
+	go run ./cmd/shortener/...
 
 unittest:
 	go test -v -cover ./...
@@ -19,5 +19,6 @@ autotest: build
 	shortenertestbeta -test.v -test.run=^TestIteration3$$ -source-path=.
 	shortenertestbeta -test.v -test.run=^TestIteration4$$ -binary-path=bin/shortener -server-port=8842
 	shortenertestbeta -test.v -test.run=^TestIteration5$$ -binary-path=bin/shortener -server-port=8842
+	shortenertestbeta -test.v -test.run=^TestIteration6$$ -source-path=.
 
 test: unittest statictest autotest

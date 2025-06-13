@@ -2,37 +2,36 @@ package main
 
 import (
 	"log"
-	"net/http"
 
 	"github.com/aleffnull/shortener/internal/app"
 	"github.com/aleffnull/shortener/internal/config"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/ldez/mimetype"
+	"github.com/aleffnull/shortener/internal/pkg/logger"
+	"go.uber.org/zap"
 )
 
 func main() {
-	configuration, err := config.GetConfiguration()
+	zap, err := zap.NewDevelopment()
 	if err != nil {
-		log.Fatalf("configuration error: %v", err)
+		log.Fatalf("failed to create zap logger: %v", err)
 	}
 
-	log.Printf("using configuration: %+v\n", configuration)
+	defer zap.Sync()
+	logger := logger.NewZapLogger(zap)
+
+	configuration, err := config.GetConfiguration()
+	if err != nil {
+		logger.Fatalf("configuration error: %v", err)
+	}
+
+	logger.Infof("using configuration: %+v", configuration)
+
 	shortenerApp := app.NewShortenerApp()
 	handler := app.NewHandler(configuration, shortenerApp)
+	router := app.NewRouter(logger)
+	router.Prepare(handler)
 
-	router := chi.NewRouter()
-	router.Use(middleware.AllowContentType(mimetype.TextPlain))
-	router.Get("/{key}", func(response http.ResponseWriter, request *http.Request) {
-		key := chi.URLParam(request, "key")
-		handler.HandleGetRequest(response, key)
-	})
-	router.Post("/", func(response http.ResponseWriter, request *http.Request) {
-		handler.HandlePostRequest(response, request)
-	})
-
-	err = http.ListenAndServe(configuration.ServerAddress, router)
+	err = router.Run(configuration)
 	if err != nil {
-		log.Fatalf("failed to start server: %v", err)
+		logger.Fatalf("failed to start server: %v", err)
 	}
 }
