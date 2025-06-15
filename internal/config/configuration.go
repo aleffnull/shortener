@@ -10,8 +10,9 @@ import (
 )
 
 type Configuration struct {
-	ServerAddress string `env:"SERVER_ADDRESS" validate:"required,hostname_port"`
-	BaseURL       string `env:"BASE_URL" validate:"required,url"`
+	ServerAddress string                    `env:"SERVER_ADDRESS" validate:"required,hostname_port"`
+	BaseURL       string                    `env:"BASE_URL" validate:"required,url"`
+	MemoryStore   *MemoryStoreConfiguration `validate:"required"`
 }
 
 func GetConfiguration() (*Configuration, error) {
@@ -28,6 +29,7 @@ func GetConfiguration() (*Configuration, error) {
 	configuration := &Configuration{
 		ServerAddress: lo.Ternary(len(envConfig.ServerAddress) > 0, envConfig.ServerAddress, flagConfig.ServerAddress),
 		BaseURL:       lo.Ternary(len(envConfig.BaseURL) > 0, envConfig.BaseURL, flagConfig.BaseURL),
+		MemoryStore:   defaultMemoryStoreConfiguration(),
 	}
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	err = validate.Struct(configuration)

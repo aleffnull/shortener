@@ -13,17 +13,17 @@ import (
 )
 
 type Handler struct {
-	shortenerApp *ShortenerApp
+	shortener App
 }
 
-func NewHandler(shortenerApp *ShortenerApp) *Handler {
+func NewHandler(shortener App) *Handler {
 	return &Handler{
-		shortenerApp: shortenerApp,
+		shortener: shortener,
 	}
 }
 
 func (h *Handler) HandleGetRequest(response http.ResponseWriter, key string) {
-	value, ok := h.shortenerApp.GetURL(key)
+	value, ok := h.shortener.GetURL(key)
 	if !ok {
 		http.Error(response, "Key was not found", http.StatusBadRequest)
 		return
@@ -46,10 +46,10 @@ func (h *Handler) HandlePostRequest(response http.ResponseWriter, request *http.
 		return
 	}
 
-	shortenRequest := models.ShortenRequest{
+	shortenRequest := &models.ShortenRequest{
 		URL: longURL,
 	}
-	shortenerResponse, err := h.shortenerApp.ShortenURL(&shortenRequest)
+	shortenerResponse, err := h.shortener.ShortenURL(shortenRequest)
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
 		return
@@ -73,7 +73,7 @@ func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.R
 		return
 	}
 
-	shortenerResponse, err := h.shortenerApp.ShortenURL(&shortenRequest)
+	shortenerResponse, err := h.shortener.ShortenURL(&shortenRequest)
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
 		return

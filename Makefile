@@ -7,6 +7,10 @@ build:
 run:
 	go run ./cmd/shortener/...
 
+mock:
+	mockgen -source internal/app/app.go -destination internal/pkg/mocks/mock_app.go -package mocks
+	mockgen -source internal/store/store.go -destination internal/pkg/mocks/mock_store.go -package mocks
+
 unittest:
 	go test -v -cover ./...
 

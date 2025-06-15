@@ -5,25 +5,26 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"sync"
+
+	"github.com/aleffnull/shortener/internal/config"
 )
 
 type MemoryStore struct {
-	storeMap map[string]string
-	mutex    sync.RWMutex
+	storeMap      map[string]string
+	configuration *config.MemoryStoreConfiguration
+	mutex         sync.RWMutex
 }
 
-var _ Store = &MemoryStore{}
+var _ Store = (*MemoryStore)(nil)
 
 const (
-	alphabet         = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	keyLength        = 8
-	keyMaxLength     = 100
-	keyMaxIterations = 10
+	alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
-func NewMemoryStore() Store {
+func NewMemoryStore(configuration *config.Configuration) Store {
 	return &MemoryStore{
-		storeMap: make(map[string]string),
+		storeMap:      make(map[string]string),
+		configuration: configuration.MemoryStore,
 	}
 }
 
@@ -48,11 +49,25 @@ func (ms *MemoryStore) Save(value string) (string, error) {
 	return key, nil
 }
 
-func (ms *MemoryStore) Set(key, value string) {
-	ms.mutex.Lock()
-	defer ms.mutex.Unlock()
+func (ms *MemoryStore) getUniqueKey() (string, error) {
+	length := ms.configuration.KeyLength
+	i := 0
 
-	ms.storeMap[key] = value
+	for length <= ms.configuration.KeyMaxLength {
+		key := randomString(length)
+		_, exists := ms.storeMap[key]
+		if !exists {
+			return key, nil
+		}
+
+		i++
+		if i >= ms.configuration.KeyMaxIterations {
+			length *= 2
+			i = 0
+		}
+	}
+
+	return "", errors.New("failed to generate unique key")
 }
 
 func randomString(length int) string {
@@ -62,25 +77,4 @@ func randomString(length int) string {
 	}
 
 	return string(arr)
-}
-
-func (ms *MemoryStore) getUniqueKey() (string, error) {
-	length := keyLength
-	i := 0
-
-	for length < keyMaxLength {
-		key := randomString(length)
-		_, exists := ms.storeMap[key]
-		if !exists {
-			return key, nil
-		}
-
-		i++
-		if i >= keyMaxIterations {
-			length *= 2
-			i = 0
-		}
-	}
-
-	return "", errors.New("failed to generate unique key")
 }

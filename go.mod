@@ -10,6 +10,7 @@ require (
 	github.com/ldez/mimetype v0.5.0
 	github.com/samber/lo v1.51.0
 	github.com/stretchr/testify v1.10.0
+	go.uber.org/mock v0.5.2
 	go.uber.org/zap v1.27.0
 )
 

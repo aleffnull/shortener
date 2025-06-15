@@ -6,6 +6,7 @@ import (
 	"github.com/aleffnull/shortener/internal/app"
 	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
+	"github.com/aleffnull/shortener/internal/store"
 	"go.uber.org/zap"
 )
 
@@ -25,8 +26,9 @@ func main() {
 
 	logger.Infof("using configuration: %+v", configuration)
 
-	shortenerApp := app.NewShortenerApp(configuration)
-	handler := app.NewHandler(shortenerApp)
+	storage := store.NewMemoryStore(configuration)
+	shortener := app.NewShortenerApp(storage, configuration)
+	handler := app.NewHandler(shortener)
 	router := app.NewRouter(logger)
 	router.Prepare(handler)
 
