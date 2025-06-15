@@ -20,5 +20,6 @@ autotest: build
 	shortenertestbeta -test.v -test.run=^TestIteration4$$ -binary-path=bin/shortener -server-port=8842
 	shortenertestbeta -test.v -test.run=^TestIteration5$$ -binary-path=bin/shortener -server-port=8842
 	shortenertestbeta -test.v -test.run=^TestIteration6$$ -source-path=.
+	shortenertestbeta -test.v -test.run=^TestIteration7$$ -binary-path=bin/shortener -source-path=.
 
 test: unittest statictest autotest

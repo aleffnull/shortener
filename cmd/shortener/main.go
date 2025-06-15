@@ -25,8 +25,8 @@ func main() {
 
 	logger.Infof("using configuration: %+v", configuration)
 
-	shortenerApp := app.NewShortenerApp()
-	handler := app.NewHandler(configuration, shortenerApp)
+	shortenerApp := app.NewShortenerApp(configuration)
+	handler := app.NewHandler(shortenerApp)
 	router := app.NewRouter(logger)
 	router.Prepare(handler)
 

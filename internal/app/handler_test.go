@@ -1,6 +1,8 @@
 package app
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/models"
 	"github.com/go-http-utils/headers"
 	"github.com/stretchr/testify/require"
 )
@@ -54,8 +57,8 @@ func TestHandleGetRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange.
 			recorder := httptest.NewRecorder()
-			shortenerApp := NewShortenerApp()
-			handler := NewHandler(&config.Configuration{}, shortenerApp)
+			shortenerApp := NewShortenerApp(&config.Configuration{})
+			handler := NewHandler(shortenerApp)
 			if tt.hookBefore != nil {
 				tt.hookBefore(shortenerApp)
 			}
@@ -98,7 +101,7 @@ func TestHandlePostRequest(t *testing.T) {
 		want    want
 	}{
 		{
-			name: "empty body",
+			name: "no body",
 			want: want{
 				statusCode: http.StatusBadRequest,
 			},
@@ -130,8 +133,8 @@ func TestHandlePostRequest(t *testing.T) {
 			configuration := &config.Configuration{
 				BaseURL: tt.baseURL,
 			}
-			shortenerApp := NewShortenerApp()
-			handler := NewHandler(configuration, shortenerApp)
+			shortenerApp := NewShortenerApp(configuration)
+			handler := NewHandler(shortenerApp)
 
 			// Act.
 			handler.HandlePostRequest(recorder, request)
@@ -147,6 +150,93 @@ func TestHandlePostRequest(t *testing.T) {
 
 			if tt.want.validateURL {
 				_, err = url.ParseRequestURI(string(body))
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestHandleAPIRequest(t *testing.T) {
+	type want struct {
+		statusCode  int
+		validateURL bool
+	}
+
+	tests := []struct {
+		name           string
+		baseURL        string
+		shortenRequest *models.ShortenRequest
+		want           want
+	}{
+		{
+			name:           "no body",
+			shortenRequest: nil,
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name:           "invalid request",
+			shortenRequest: &models.ShortenRequest{},
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name:    "invalid base URL",
+			baseURL: ":localhost:8080",
+			shortenRequest: &models.ShortenRequest{
+				URL: "http://foo.bar",
+			},
+			want: want{
+				statusCode: http.StatusInternalServerError,
+			},
+		},
+		{
+			name:    "valid request",
+			baseURL: "http://localhost:8080",
+			shortenRequest: &models.ShortenRequest{
+				URL: "http://foo.bar",
+			},
+			want: want{
+				statusCode:  http.StatusCreated,
+				validateURL: true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange.
+			var body io.Reader
+			if tt.shortenRequest != nil {
+				jsonRequest, err := json.Marshal(tt.shortenRequest)
+				require.NoError(t, err)
+				body = bytes.NewReader(jsonRequest)
+			}
+
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten", body)
+			recorder := httptest.NewRecorder()
+			configuration := &config.Configuration{
+				BaseURL: tt.baseURL,
+			}
+			shortenerApp := NewShortenerApp(configuration)
+			handler := NewHandler(shortenerApp)
+
+			// Act.
+			handler.HandleAPIRequest(recorder, request)
+
+			// Assert.
+			result := recorder.Result()
+			require.Equal(t, tt.want.statusCode, result.StatusCode)
+
+			if tt.want.validateURL {
+				defer result.Body.Close()
+				var shortenResponse models.ShortenResponse
+				err := json.NewDecoder(result.Body).Decode(&shortenResponse)
+				require.NoError(t, err)
+
+				_, err = url.ParseRequestURI(string(shortenResponse.Result))
 				require.NoError(t, err)
 			}
 		})

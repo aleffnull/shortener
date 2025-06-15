@@ -25,29 +25,29 @@ func NewRouter(logger logger.Logger) *Router {
 }
 
 func (r *Router) Prepare(handler *Handler) {
-	r.mux.Use(cm.AllowContentType(mimetype.TextPlain))
-	r.mux.Get("/{key}", r.loggingMiddleware(r.makeGetHandler(handler)))
-	r.mux.Post("/", r.loggingMiddleware(r.makePostHandler(handler)))
+	setPlaintText := createContentTypeRestriction(mimetype.TextPlain)
+	setJSON := createContentTypeRestriction(mimetype.ApplicationJSON)
+
+	r.mux.Get("/{key}", r.doLog(setPlaintText(makeGetHandler(handler))))
+	r.mux.Post("/", r.doLog(setPlaintText(handler.HandlePostRequest)))
+	r.mux.Post("/api/shorten", r.doLog(setJSON(handler.HandleAPIRequest)))
+}
+
+func createContentTypeRestriction(contentType string) func(http.HandlerFunc) http.HandlerFunc {
+	restrictor := cm.AllowContentType(contentType)
+	return func(handler http.HandlerFunc) http.HandlerFunc {
+		restricted := restrictor(handler)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			restricted.ServeHTTP(w, r)
+		})
+	}
 }
 
 func (r *Router) Run(configuration *config.Configuration) error {
 	return http.ListenAndServe(configuration.ServerAddress, r.mux)
 }
 
-func (r *Router) makeGetHandler(handler *Handler) http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		key := chi.URLParam(request, "key")
-		handler.HandleGetRequest(writer, key)
-	}
-}
-
-func (r *Router) makePostHandler(handler *Handler) http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		handler.HandlePostRequest(writer, request)
-	}
-}
-
-func (r *Router) loggingMiddleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
+func (r *Router) doLog(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		startTime := time.Now()
 		responseWriter := middleware.NewResponseWriter(writer)
@@ -61,5 +61,12 @@ func (r *Router) loggingMiddleware(handlerFunc http.HandlerFunc) http.HandlerFun
 			duration,
 			responseWriter.GetStatus(),
 			responseWriter.GetSize())
+	}
+}
+
+func makeGetHandler(handler *Handler) http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		key := chi.URLParam(request, "key")
+		handler.HandleGetRequest(writer, key)
 	}
 }
