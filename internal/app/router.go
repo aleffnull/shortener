@@ -12,6 +12,8 @@ import (
 	"github.com/ldez/mimetype"
 )
 
+const mimetypeApplicationGZIP = "application/x-gzip"
+
 type Router struct {
 	mux    *chi.Mux
 	logger logger.Logger
@@ -25,22 +27,31 @@ func NewRouter(logger logger.Logger) *Router {
 }
 
 func (r *Router) Prepare(handler *Handler) {
-	setPlaintText := createContentTypeRestriction(mimetype.TextPlain)
-	setJSON := createContentTypeRestriction(mimetype.ApplicationJSON)
+	r.mux.Get("/{key}",
+		r.doLog(
+			setContentType(
+				makeGetHandler(handler),
+				mimetype.TextPlain)))
 
-	r.mux.Get("/{key}", r.doLog(setPlaintText(makeGetHandler(handler))))
-	r.mux.Post("/", r.doLog(setPlaintText(handler.HandlePostRequest)))
-	r.mux.Post("/api/shorten", r.doLog(setJSON(handler.HandleAPIRequest)))
+	r.mux.Post("/",
+		r.doLog(
+			setContentType(
+				middleware.GzipHandler(handler.HandlePostRequest),
+				mimetype.TextPlain, mimetypeApplicationGZIP)))
+
+	r.mux.Post("/api/shorten",
+		r.doLog(
+			setContentType(
+				middleware.GzipHandler(handler.HandleAPIRequest),
+				mimetype.ApplicationJSON, mimetypeApplicationGZIP)))
 }
 
-func createContentTypeRestriction(contentType string) func(http.HandlerFunc) http.HandlerFunc {
-	restrictor := cm.AllowContentType(contentType)
-	return func(handler http.HandlerFunc) http.HandlerFunc {
-		restricted := restrictor(handler)
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			restricted.ServeHTTP(w, r)
-		})
-	}
+func setContentType(next http.HandlerFunc, contentType ...string) http.HandlerFunc {
+	restrictor := cm.AllowContentType(contentType...)
+	restricted := restrictor(next)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		restricted.ServeHTTP(w, r)
+	})
 }
 
 func (r *Router) Run(configuration *config.Configuration) error {
