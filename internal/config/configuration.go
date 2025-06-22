@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/go-playground/validator/v10"
@@ -13,6 +14,24 @@ type Configuration struct {
 	ServerAddress string                    `env:"SERVER_ADDRESS" validate:"required,hostname_port"`
 	BaseURL       string                    `env:"BASE_URL" validate:"required,url"`
 	MemoryStore   *MemoryStoreConfiguration `validate:"required"`
+}
+
+func (c *Configuration) String() string {
+	sb := &strings.Builder{}
+	fmt.Fprintf(
+		sb,
+		"&Configuration{ServerAddress:%v BaseURL:%v",
+		c.ServerAddress,
+		c.BaseURL)
+
+	if c.MemoryStore == nil {
+		fmt.Fprintf(sb, " MemoryStore:<nil>")
+	} else {
+		fmt.Fprintf(sb, " MemoryStore:%v", c.MemoryStore)
+	}
+
+	fmt.Fprintf(sb, "}")
+	return sb.String()
 }
 
 func GetConfiguration() (*Configuration, error) {

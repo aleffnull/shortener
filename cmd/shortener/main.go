@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"github.com/aleffnull/shortener/internal/app"
@@ -17,23 +18,26 @@ func main() {
 	}
 
 	defer zap.Sync()
-	logger := logger.NewZapLogger(zap)
+	log := logger.NewZapLogger(zap)
 
 	configuration, err := config.GetConfiguration()
 	if err != nil {
-		logger.Fatalf("configuration error: %v", err)
+		log.Fatalf("configuration error: %v", err)
 	}
 
-	logger.Infof("using configuration: %+v", configuration)
+	log.Infof("using configuration: %+v", configuration)
+
+	ctx := context.Background()
+	ctx = logger.ContextWithLogger(ctx, log)
 
 	storage := store.NewMemoryStore(configuration)
 	shortener := app.NewShortenerApp(storage, configuration)
 	handler := app.NewHandler(shortener)
-	router := app.NewRouter(logger)
+	router := app.NewRouter()
 	router.Prepare(handler)
 
-	err = router.Run(configuration)
+	err = router.Run(ctx, configuration)
 	if err != nil {
-		logger.Fatalf("failed to start server: %v", err)
+		log.Fatalf("failed to start server: %v", err)
 	}
 }
