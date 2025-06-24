@@ -14,6 +14,7 @@ type Configuration struct {
 	ServerAddress string                    `env:"SERVER_ADDRESS" validate:"required,hostname_port"`
 	BaseURL       string                    `env:"BASE_URL" validate:"required,url"`
 	MemoryStore   *MemoryStoreConfiguration `validate:"required"`
+	FileStore     *FileStoreConfiguration   `validate:"required"`
 }
 
 func (c *Configuration) String() string {
@@ -28,6 +29,12 @@ func (c *Configuration) String() string {
 		fmt.Fprintf(sb, " MemoryStore:<nil>")
 	} else {
 		fmt.Fprintf(sb, " MemoryStore:%v", c.MemoryStore)
+	}
+
+	if c.FileStore == nil {
+		fmt.Fprintf(sb, " FileStore:<nil>")
+	} else {
+		fmt.Fprintf(sb, " FileStore:%v", c.FileStore)
 	}
 
 	fmt.Fprintf(sb, "}")
@@ -49,6 +56,12 @@ func GetConfiguration() (*Configuration, error) {
 		ServerAddress: lo.Ternary(len(envConfig.ServerAddress) > 0, envConfig.ServerAddress, flagConfig.ServerAddress),
 		BaseURL:       lo.Ternary(len(envConfig.BaseURL) > 0, envConfig.BaseURL, flagConfig.BaseURL),
 		MemoryStore:   defaultMemoryStoreConfiguration(),
+		FileStore: &FileStoreConfiguration{
+			FilePath: lo.Ternary(
+				len(envConfig.FileStore.FilePath) > 0,
+				envConfig.FileStore.FilePath,
+				flagConfig.FileStore.FilePath),
+		},
 	}
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	err = validate.Struct(configuration)
@@ -60,17 +73,22 @@ func GetConfiguration() (*Configuration, error) {
 }
 
 func parseFlags() (*Configuration, error) {
-	configuration := &Configuration{}
+	configuration := &Configuration{
+		FileStore: &FileStoreConfiguration{},
+	}
 
 	flag.StringVar(&configuration.ServerAddress, "a", "localhost:8080", "address and port of running server")
 	flag.StringVar(&configuration.BaseURL, "b", "http://localhost:8080", "short link base URL")
+	flag.StringVar(&configuration.FileStore.FilePath, "f", "shortener.jsonl", "path to storage file")
 	flag.Parse()
 
 	return configuration, nil
 }
 
 func parseEnvironment() (*Configuration, error) {
-	configuration := &Configuration{}
+	configuration := &Configuration{
+		FileStore: &FileStoreConfiguration{},
+	}
 	err := env.Parse(configuration)
 
 	return configuration, err

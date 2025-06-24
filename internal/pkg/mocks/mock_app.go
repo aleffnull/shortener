@@ -10,6 +10,7 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	models "github.com/aleffnull/shortener/models"
@@ -53,6 +54,20 @@ func (m *MockApp) GetURL(key string) (string, bool) {
 func (mr *MockAppMockRecorder) GetURL(key any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetURL", reflect.TypeOf((*MockApp)(nil).GetURL), key)
+}
+
+// Init mocks base method.
+func (m *MockApp) Init(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Init", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Init indicates an expected call of Init.
+func (mr *MockAppMockRecorder) Init(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockApp)(nil).Init), arg0)
 }
 
 // ShortenURL mocks base method.

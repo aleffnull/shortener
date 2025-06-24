@@ -12,6 +12,7 @@ package mocks
 import (
 	reflect "reflect"
 
+	store "github.com/aleffnull/shortener/internal/store"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -54,6 +55,18 @@ func (mr *MockStoreMockRecorder) Load(key any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockStore)(nil).Load), key)
 }
 
+// PreSave mocks base method.
+func (m *MockStore) PreSave(key, value string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "PreSave", key, value)
+}
+
+// PreSave indicates an expected call of PreSave.
+func (mr *MockStoreMockRecorder) PreSave(key, value any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreSave", reflect.TypeOf((*MockStore)(nil).PreSave), key, value)
+}
+
 // Save mocks base method.
 func (m *MockStore) Save(value string) (string, error) {
 	m.ctrl.T.Helper()
@@ -67,4 +80,57 @@ func (m *MockStore) Save(value string) (string, error) {
 func (mr *MockStoreMockRecorder) Save(value any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockStore)(nil).Save), value)
+}
+
+// MockColdStore is a mock of ColdStore interface.
+type MockColdStore struct {
+	ctrl     *gomock.Controller
+	recorder *MockColdStoreMockRecorder
+	isgomock struct{}
+}
+
+// MockColdStoreMockRecorder is the mock recorder for MockColdStore.
+type MockColdStoreMockRecorder struct {
+	mock *MockColdStore
+}
+
+// NewMockColdStore creates a new mock instance.
+func NewMockColdStore(ctrl *gomock.Controller) *MockColdStore {
+	mock := &MockColdStore{ctrl: ctrl}
+	mock.recorder = &MockColdStoreMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockColdStore) EXPECT() *MockColdStoreMockRecorder {
+	return m.recorder
+}
+
+// LoadAll mocks base method.
+func (m *MockColdStore) LoadAll() ([]*store.ColdStoreEntry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoadAll")
+	ret0, _ := ret[0].([]*store.ColdStoreEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LoadAll indicates an expected call of LoadAll.
+func (mr *MockColdStoreMockRecorder) LoadAll() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadAll", reflect.TypeOf((*MockColdStore)(nil).LoadAll))
+}
+
+// Save mocks base method.
+func (m *MockColdStore) Save(entry *store.ColdStoreEntry) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Save", entry)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Save indicates an expected call of Save.
+func (mr *MockColdStoreMockRecorder) Save(entry any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockColdStore)(nil).Save), entry)
 }

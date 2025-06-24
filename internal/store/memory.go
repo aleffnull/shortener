@@ -49,6 +49,11 @@ func (ms *MemoryStore) Save(value string) (string, error) {
 	return key, nil
 }
 
+func (ms *MemoryStore) PreSave(key, value string) {
+	// Called only in main goroutine, so no need for mutex locking.
+	ms.storeMap[key] = value
+}
+
 func (ms *MemoryStore) getUniqueKey() (string, error) {
 	length := ms.configuration.KeyLength
 	i := 0

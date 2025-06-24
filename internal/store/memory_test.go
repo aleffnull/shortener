@@ -48,6 +48,26 @@ func TestMemoryStore_SaveAndLoad(t *testing.T) {
 	require.Equal(t, "foo", value)
 }
 
+func TestMemoryStore_PreSaveAndLoad(t *testing.T) {
+	// Arrange.
+	configuration := &config.Configuration{
+		MemoryStore: &config.MemoryStoreConfiguration{
+			KeyLength:        8,
+			KeyMaxLength:     100,
+			KeyMaxIterations: 10,
+		},
+	}
+	store := NewMemoryStore(configuration)
+
+	// Act.
+	store.PreSave("key", "foo")
+	value, ok := store.Load("key")
+
+	// Assert.
+	require.True(t, ok)
+	require.Equal(t, "foo", value)
+}
+
 func TestMemoryStore_Save_NotUniqueKey(t *testing.T) {
 	// Arrange.
 	configuration := &config.Configuration{

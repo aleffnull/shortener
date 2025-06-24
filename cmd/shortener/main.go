@@ -31,7 +31,12 @@ func main() {
 	ctx = logger.ContextWithLogger(ctx, log)
 
 	storage := store.NewMemoryStore(configuration)
-	shortener := app.NewShortenerApp(storage, configuration)
+	coldStorage := store.NewFileStore(configuration)
+	shortener := app.NewShortenerApp(storage, coldStorage, configuration)
+	if err = shortener.Init(ctx); err != nil {
+		log.Fatalf("failed to init application: %v", err)
+	}
+
 	handler := app.NewHandler(shortener)
 	router := app.NewRouter()
 	router.Prepare(handler)
