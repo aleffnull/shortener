@@ -1,30 +1,29 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 
-	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/models"
 	"github.com/go-http-utils/headers"
+	"github.com/go-playground/validator/v10"
 	"github.com/ldez/mimetype"
 )
 
 type Handler struct {
-	configuration *config.Configuration
-	shortenerApp  *ShortenerApp
+	shortener App
 }
 
-func NewHandler(configuration *config.Configuration, shortenerApp *ShortenerApp) *Handler {
+func NewHandler(shortener App) *Handler {
 	return &Handler{
-		configuration: configuration,
-		shortenerApp:  shortenerApp,
+		shortener: shortener,
 	}
 }
 
 func (h *Handler) HandleGetRequest(response http.ResponseWriter, key string) {
-	value, ok := h.shortenerApp.GetURL(key)
+	value, ok := h.shortener.GetURL(key)
 	if !ok {
 		http.Error(response, "Key was not found", http.StatusBadRequest)
 		return
@@ -41,19 +40,16 @@ func (h *Handler) HandlePostRequest(response http.ResponseWriter, request *http.
 		return
 	}
 
-	bodyStr := string(body)
+	longURL := string(body)
 	if len(body) == 0 {
 		http.Error(response, "Body is required", http.StatusBadRequest)
 		return
 	}
 
-	key, err := h.shortenerApp.SaveURL(bodyStr)
-	if err != nil {
-		http.Error(response, err.Error(), http.StatusInternalServerError)
-		return
+	shortenRequest := &models.ShortenRequest{
+		URL: longURL,
 	}
-
-	shortPath, err := url.JoinPath(h.configuration.BaseURL, key)
+	shortenerResponse, err := h.shortener.ShortenURL(shortenRequest)
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
 		return
@@ -61,5 +57,33 @@ func (h *Handler) HandlePostRequest(response http.ResponseWriter, request *http.
 
 	response.Header().Set(headers.ContentType, mimetype.TextPlain)
 	response.WriteHeader(http.StatusCreated)
-	fmt.Fprint(response, shortPath)
+	fmt.Fprint(response, shortenerResponse.Result)
+}
+
+func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.Request) {
+	var shortenRequest models.ShortenRequest
+	if err := json.NewDecoder(request.Body).Decode(&shortenRequest); err != nil {
+		http.Error(response, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := validate.Struct(shortenRequest); err != nil {
+		http.Error(response, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	shortenerResponse, err := h.shortener.ShortenURL(&shortenRequest)
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response.Header().Set(headers.ContentType, mimetype.ApplicationJSON)
+	response.WriteHeader(http.StatusCreated)
+
+	if err = json.NewEncoder(response).Encode(shortenerResponse); err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

@@ -1,37 +1,47 @@
 package main
 
 import (
+	"context"
 	"log"
-	"net/http"
 
 	"github.com/aleffnull/shortener/internal/app"
 	"github.com/aleffnull/shortener/internal/config"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/ldez/mimetype"
+	"github.com/aleffnull/shortener/internal/pkg/logger"
+	"github.com/aleffnull/shortener/internal/store"
+	"go.uber.org/zap"
 )
 
 func main() {
+	zap, err := zap.NewDevelopment()
+	if err != nil {
+		log.Fatalf("failed to create zap logger: %v", err)
+	}
+
+	defer zap.Sync()
+	log := logger.NewZapLogger(zap)
+
 	configuration, err := config.GetConfiguration()
 	if err != nil {
 		log.Fatalf("configuration error: %v", err)
 	}
 
-	log.Printf("using configuration: %+v\n", configuration)
-	shortenerApp := app.NewShortenerApp()
-	handler := app.NewHandler(configuration, shortenerApp)
+	log.Infof("using configuration: %+v", configuration)
 
-	router := chi.NewRouter()
-	router.Use(middleware.AllowContentType(mimetype.TextPlain))
-	router.Get("/{key}", func(response http.ResponseWriter, request *http.Request) {
-		key := chi.URLParam(request, "key")
-		handler.HandleGetRequest(response, key)
-	})
-	router.Post("/", func(response http.ResponseWriter, request *http.Request) {
-		handler.HandlePostRequest(response, request)
-	})
+	ctx := context.Background()
+	ctx = logger.ContextWithLogger(ctx, log)
 
-	err = http.ListenAndServe(configuration.ServerAddress, router)
+	storage := store.NewMemoryStore(configuration)
+	coldStorage := store.NewFileStore(configuration)
+	shortener := app.NewShortenerApp(storage, coldStorage, configuration)
+	if err = shortener.Init(ctx); err != nil {
+		log.Fatalf("failed to init application: %v", err)
+	}
+
+	handler := app.NewHandler(shortener)
+	router := app.NewRouter()
+	router.Prepare(handler)
+
+	err = router.Run(ctx, configuration)
 	if err != nil {
 		log.Fatalf("failed to start server: %v", err)
 	}

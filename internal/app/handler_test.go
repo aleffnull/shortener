@@ -1,6 +1,8 @@
 package app
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -8,12 +10,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/pkg/mocks"
+	"github.com/aleffnull/shortener/models"
 	"github.com/go-http-utils/headers"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
-func TestHandleGetRequest(t *testing.T) {
+func TestHandler_HandleGetRequest(t *testing.T) {
 	type want struct {
 		statusCode int
 		headers    map[string]string
@@ -23,8 +28,8 @@ func TestHandleGetRequest(t *testing.T) {
 	tests := []struct {
 		name       string
 		key        string
-		hookBefore func(shortener *ShortenerApp)
 		want       want
+		hookBefore func(key string, app *mocks.MockApp)
 	}{
 		{
 			name: "unknown key",
@@ -33,19 +38,22 @@ func TestHandleGetRequest(t *testing.T) {
 				statusCode: http.StatusBadRequest,
 				emptyBody:  false,
 			},
+			hookBefore: func(key string, app *mocks.MockApp) {
+				app.EXPECT().GetURL(key).Return("", false)
+			},
 		},
 		{
 			name: "existing key",
 			key:  "foo",
-			hookBefore: func(shortener *ShortenerApp) {
-				shortener.SetKeyAndURL("foo", "http://bar.buz")
-			},
 			want: want{
 				statusCode: http.StatusTemporaryRedirect,
 				headers: map[string]string{
 					headers.Location: "http://bar.buz",
 				},
 				emptyBody: true,
+			},
+			hookBefore: func(key string, app *mocks.MockApp) {
+				app.EXPECT().GetURL(key).Return("http://bar.buz", true)
 			},
 		},
 	}
@@ -54,11 +62,10 @@ func TestHandleGetRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange.
 			recorder := httptest.NewRecorder()
-			shortenerApp := NewShortenerApp()
-			handler := NewHandler(&config.Configuration{}, shortenerApp)
-			if tt.hookBefore != nil {
-				tt.hookBefore(shortenerApp)
-			}
+			ctrl := gomock.NewController(t)
+			shortener := mocks.NewMockApp(ctrl)
+			handler := NewHandler(shortener)
+			tt.hookBefore(tt.key, shortener)
 
 			// Act.
 			handler.HandleGetRequest(recorder, tt.key)
@@ -85,39 +92,51 @@ func TestHandleGetRequest(t *testing.T) {
 	}
 }
 
-func TestHandlePostRequest(t *testing.T) {
+func TestHandler_HandlePostRequest(t *testing.T) {
 	type want struct {
 		statusCode  int
 		validateURL bool
 	}
 
 	tests := []struct {
-		name    string
-		baseURL string
-		body    string
-		want    want
+		name       string
+		longURL    string
+		want       want
+		hookBefore func(longURL string, app *mocks.MockApp)
 	}{
 		{
-			name: "empty body",
+			name: "no body",
 			want: want{
 				statusCode: http.StatusBadRequest,
 			},
 		},
 		{
-			name:    "invalid base URL",
-			baseURL: ":localhost:8080",
-			body:    "http://foo.bar",
+			name:    "app error",
+			longURL: "http://foo.bar",
 			want: want{
 				statusCode: http.StatusInternalServerError,
+			},
+			hookBefore: func(longURL string, app *mocks.MockApp) {
+				shortenRequest := &models.ShortenRequest{
+					URL: longURL,
+				}
+				app.EXPECT().ShortenURL(shortenRequest).Return(nil, assert.AnError)
 			},
 		},
 		{
 			name:    "valid request",
-			baseURL: "http://localhost:8080",
-			body:    "http://foo.bar",
+			longURL: "http://foo.bar",
 			want: want{
 				statusCode:  http.StatusCreated,
 				validateURL: true,
+			},
+			hookBefore: func(longURL string, app *mocks.MockApp) {
+				shortenRequest := &models.ShortenRequest{
+					URL: longURL,
+				}
+				app.EXPECT().ShortenURL(shortenRequest).Return(&models.ShortenResponse{
+					Result: "http://localhost/abc",
+				}, nil)
 			},
 		},
 	}
@@ -125,13 +144,14 @@ func TestHandlePostRequest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange.
-			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
 			recorder := httptest.NewRecorder()
-			configuration := &config.Configuration{
-				BaseURL: tt.baseURL,
+			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.longURL))
+			ctrl := gomock.NewController(t)
+			shortener := mocks.NewMockApp(ctrl)
+			handler := NewHandler(shortener)
+			if tt.hookBefore != nil {
+				tt.hookBefore(tt.longURL, shortener)
 			}
-			shortenerApp := NewShortenerApp()
-			handler := NewHandler(configuration, shortenerApp)
 
 			// Act.
 			handler.HandlePostRequest(recorder, request)
@@ -147,6 +167,100 @@ func TestHandlePostRequest(t *testing.T) {
 
 			if tt.want.validateURL {
 				_, err = url.ParseRequestURI(string(body))
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestHandler_HandleAPIRequest(t *testing.T) {
+	type want struct {
+		statusCode  int
+		validateURL bool
+	}
+
+	tests := []struct {
+		name           string
+		shortenRequest *models.ShortenRequest
+		want           want
+		hookBefore     func(shortenRequest *models.ShortenRequest, app *mocks.MockApp)
+	}{
+		{
+			name:           "no body",
+			shortenRequest: nil,
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name:           "invalid request",
+			shortenRequest: &models.ShortenRequest{},
+			want: want{
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "app error",
+			shortenRequest: &models.ShortenRequest{
+				URL: "http://foo.bar",
+			},
+			want: want{
+				statusCode: http.StatusInternalServerError,
+			},
+			hookBefore: func(shortenRequest *models.ShortenRequest, app *mocks.MockApp) {
+				app.EXPECT().ShortenURL(shortenRequest).Return(nil, assert.AnError)
+			},
+		},
+		{
+			name: "valid request",
+			shortenRequest: &models.ShortenRequest{
+				URL: "http://foo.bar",
+			},
+			want: want{
+				statusCode:  http.StatusCreated,
+				validateURL: true,
+			},
+			hookBefore: func(shortenRequest *models.ShortenRequest, app *mocks.MockApp) {
+				app.EXPECT().ShortenURL(shortenRequest).Return(&models.ShortenResponse{
+					Result: "http://localhost/abc",
+				}, nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange.
+			var body io.Reader
+			if tt.shortenRequest != nil {
+				jsonRequest, err := json.Marshal(tt.shortenRequest)
+				require.NoError(t, err)
+				body = bytes.NewReader(jsonRequest)
+			}
+
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten", body)
+			ctrl := gomock.NewController(t)
+			shortener := mocks.NewMockApp(ctrl)
+			handler := NewHandler(shortener)
+			if tt.hookBefore != nil {
+				tt.hookBefore(tt.shortenRequest, shortener)
+			}
+
+			// Act.
+			handler.HandleAPIRequest(recorder, request)
+
+			// Assert.
+			result := recorder.Result()
+			require.Equal(t, tt.want.statusCode, result.StatusCode)
+
+			if tt.want.validateURL {
+				defer result.Body.Close()
+				var shortenResponse models.ShortenResponse
+				err := json.NewDecoder(result.Body).Decode(&shortenResponse)
+				require.NoError(t, err)
+
+				_, err = url.ParseRequestURI(string(shortenResponse.Result))
 				require.NoError(t, err)
 			}
 		})

@@ -5,54 +5,74 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"sync"
+
+	"github.com/aleffnull/shortener/internal/config"
 )
 
 type MemoryStore struct {
-	storeMap map[string]string
-	mutex    sync.RWMutex
+	storeMap      map[string]string
+	configuration *config.MemoryStoreConfiguration
+	mutex         sync.RWMutex
 }
 
-var _ Store = &MemoryStore{}
+var _ Store = (*MemoryStore)(nil)
 
 const (
-	alphabet         = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	keyLength        = 8
-	keyMaxLength     = 100
-	keyMaxIterations = 10
+	alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
-func NewMemoryStore() Store {
+func NewMemoryStore(configuration *config.Configuration) Store {
 	return &MemoryStore{
-		storeMap: make(map[string]string),
+		storeMap:      make(map[string]string),
+		configuration: configuration.MemoryStore,
 	}
 }
 
-func (ms *MemoryStore) Load(key string) (string, bool) {
-	ms.mutex.RLock()
-	defer ms.mutex.RUnlock()
+func (s *MemoryStore) Load(key string) (string, bool) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 
-	value, ok := ms.storeMap[key]
+	value, ok := s.storeMap[key]
 	return value, ok
 }
 
-func (ms *MemoryStore) Save(value string) (string, error) {
-	ms.mutex.Lock()
-	defer ms.mutex.Unlock()
+func (s *MemoryStore) Save(value string) (string, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
-	key, err := ms.getUniqueKey()
+	key, err := s.getUniqueKey()
 	if err != nil {
 		return "", fmt.Errorf("failed to save value: %w", err)
 	}
 
-	ms.storeMap[key] = value
+	s.storeMap[key] = value
 	return key, nil
 }
 
-func (ms *MemoryStore) Set(key, value string) {
-	ms.mutex.Lock()
-	defer ms.mutex.Unlock()
+func (s *MemoryStore) PreSave(key, value string) {
+	// Called only in main goroutine, so no need for mutex locking.
+	s.storeMap[key] = value
+}
 
-	ms.storeMap[key] = value
+func (s *MemoryStore) getUniqueKey() (string, error) {
+	length := s.configuration.KeyLength
+	i := 0
+
+	for length <= s.configuration.KeyMaxLength {
+		key := randomString(length)
+		_, exists := s.storeMap[key]
+		if !exists {
+			return key, nil
+		}
+
+		i++
+		if i >= s.configuration.KeyMaxIterations {
+			length *= 2
+			i = 0
+		}
+	}
+
+	return "", errors.New("failed to generate unique key")
 }
 
 func randomString(length int) string {
@@ -62,25 +82,4 @@ func randomString(length int) string {
 	}
 
 	return string(arr)
-}
-
-func (ms *MemoryStore) getUniqueKey() (string, error) {
-	length := keyLength
-	i := 0
-
-	for length < keyMaxLength {
-		key := randomString(length)
-		_, exists := ms.storeMap[key]
-		if !exists {
-			return key, nil
-		}
-
-		i++
-		if i >= keyMaxIterations {
-			length *= 2
-			i = 0
-		}
-	}
-
-	return "", errors.New("failed to generate unique key")
 }
