@@ -27,14 +27,14 @@ func NewShortenerApp(storage store.Store, coldStorage store.ColdStore, configura
 	}
 }
 
-func (sa *ShortenerApp) Init(ctx context.Context) error {
-	entries, err := sa.coldStorage.LoadAll()
+func (s *ShortenerApp) Init(ctx context.Context) error {
+	entries, err := s.coldStorage.LoadAll()
 	if err != nil {
 		return fmt.Errorf("Init, coldStorage.LoadAll failed: %w", err)
 	}
 
 	for _, entry := range entries {
-		sa.storage.PreSave(entry.Key, entry.Value)
+		s.storage.PreSave(entry.Key, entry.Value)
 	}
 
 	log := logger.LoggerFromContext(ctx)
@@ -43,14 +43,14 @@ func (sa *ShortenerApp) Init(ctx context.Context) error {
 	return nil
 }
 
-func (sa *ShortenerApp) GetURL(key string) (string, bool) {
-	url, ok := sa.storage.Load(key)
+func (s *ShortenerApp) GetURL(key string) (string, bool) {
+	url, ok := s.storage.Load(key)
 	return url, ok
 }
 
-func (sa *ShortenerApp) ShortenURL(request *models.ShortenRequest) (*models.ShortenResponse, error) {
+func (s *ShortenerApp) ShortenURL(request *models.ShortenRequest) (*models.ShortenResponse, error) {
 	longURL := request.URL
-	key, err := sa.storage.Save(longURL)
+	key, err := s.storage.Save(longURL)
 	if err != nil {
 		return nil, fmt.Errorf("saving to storage failed: %w", err)
 	}
@@ -59,12 +59,12 @@ func (sa *ShortenerApp) ShortenURL(request *models.ShortenRequest) (*models.Shor
 		Key:   key,
 		Value: longURL,
 	}
-	err = sa.coldStorage.Save(coldStoreEntry)
+	err = s.coldStorage.Save(coldStoreEntry)
 	if err != nil {
 		return nil, fmt.Errorf("saving to cold storage failed: %w", err)
 	}
 
-	shortURL, err := url.JoinPath(sa.configuration.BaseURL, key)
+	shortURL, err := url.JoinPath(s.configuration.BaseURL, key)
 	if err != nil {
 		return nil, fmt.Errorf("URL joining failed: %w", err)
 	}

@@ -28,45 +28,45 @@ func NewMemoryStore(configuration *config.Configuration) Store {
 	}
 }
 
-func (ms *MemoryStore) Load(key string) (string, bool) {
-	ms.mutex.RLock()
-	defer ms.mutex.RUnlock()
+func (s *MemoryStore) Load(key string) (string, bool) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 
-	value, ok := ms.storeMap[key]
+	value, ok := s.storeMap[key]
 	return value, ok
 }
 
-func (ms *MemoryStore) Save(value string) (string, error) {
-	ms.mutex.Lock()
-	defer ms.mutex.Unlock()
+func (s *MemoryStore) Save(value string) (string, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
-	key, err := ms.getUniqueKey()
+	key, err := s.getUniqueKey()
 	if err != nil {
 		return "", fmt.Errorf("failed to save value: %w", err)
 	}
 
-	ms.storeMap[key] = value
+	s.storeMap[key] = value
 	return key, nil
 }
 
-func (ms *MemoryStore) PreSave(key, value string) {
+func (s *MemoryStore) PreSave(key, value string) {
 	// Called only in main goroutine, so no need for mutex locking.
-	ms.storeMap[key] = value
+	s.storeMap[key] = value
 }
 
-func (ms *MemoryStore) getUniqueKey() (string, error) {
-	length := ms.configuration.KeyLength
+func (s *MemoryStore) getUniqueKey() (string, error) {
+	length := s.configuration.KeyLength
 	i := 0
 
-	for length <= ms.configuration.KeyMaxLength {
+	for length <= s.configuration.KeyMaxLength {
 		key := randomString(length)
-		_, exists := ms.storeMap[key]
+		_, exists := s.storeMap[key]
 		if !exists {
 			return key, nil
 		}
 
 		i++
-		if i >= ms.configuration.KeyMaxIterations {
+		if i >= s.configuration.KeyMaxIterations {
 			length *= 2
 			i = 0
 		}

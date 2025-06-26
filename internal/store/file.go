@@ -24,10 +24,10 @@ func NewFileStore(configuration *config.Configuration) ColdStore {
 	}
 }
 
-func (fs *FileStore) LoadAll() ([]*ColdStoreEntry, error) {
+func (s *FileStore) LoadAll() ([]*ColdStoreEntry, error) {
 	// Called only in main goroutine, so no need for mutex locking.
 
-	if _, err := os.Stat(fs.configuration.FilePath); err != nil {
+	if _, err := os.Stat(s.configuration.FilePath); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return []*ColdStoreEntry{}, nil
 		} else {
@@ -35,7 +35,7 @@ func (fs *FileStore) LoadAll() ([]*ColdStoreEntry, error) {
 		}
 	}
 
-	file, err := os.Open(fs.configuration.FilePath)
+	file, err := os.Open(s.configuration.FilePath)
 	if err != nil {
 		return nil, fmt.Errorf("LoadAll, os.Open failed: %w", err)
 	}
@@ -61,16 +61,16 @@ func (fs *FileStore) LoadAll() ([]*ColdStoreEntry, error) {
 	return entries, nil
 }
 
-func (fs *FileStore) Save(entry *ColdStoreEntry) error {
-	fs.mutex.Lock()
-	defer fs.mutex.Unlock()
+func (s *FileStore) Save(entry *ColdStoreEntry) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
 	data, err := json.Marshal(entry)
 	if err != nil {
 		return fmt.Errorf("Save, json.Marshal failed: %w", err)
 	}
 
-	file, err := os.OpenFile(fs.configuration.FilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	file, err := os.OpenFile(s.configuration.FilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return fmt.Errorf("Save, os.OpenFile failed: %w", err)
 	}

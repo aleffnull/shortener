@@ -19,21 +19,21 @@ func NewResponseWriter(rw http.ResponseWriter) *ResponseWriter {
 	}
 }
 
-func (writer *ResponseWriter) Write(data []byte) (int, error) {
-	size, err := writer.ResponseWriter.Write(data)
-	writer.responseData.size += size
+func (w *ResponseWriter) Write(data []byte) (int, error) {
+	size, err := w.ResponseWriter.Write(data)
+	w.responseData.size += size
 	return size, err
 }
 
-func (writer *ResponseWriter) WriteHeader(statusCode int) {
-	writer.ResponseWriter.WriteHeader(statusCode)
-	writer.responseData.status = statusCode
+func (w *ResponseWriter) WriteHeader(statusCode int) {
+	w.ResponseWriter.WriteHeader(statusCode)
+	w.responseData.status = statusCode
 }
 
-func (writer *ResponseWriter) GetStatus() int {
-	return writer.responseData.status
+func (w *ResponseWriter) GetStatus() int {
+	return w.responseData.status
 }
 
-func (writer *ResponseWriter) GetSize() int {
-	return writer.responseData.size
+func (w *ResponseWriter) GetSize() int {
+	return w.responseData.size
 }
