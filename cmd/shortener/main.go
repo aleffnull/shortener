@@ -2,47 +2,81 @@ package main
 
 import (
 	"context"
-	"log"
+	"net"
+	"net/http"
 
 	"github.com/aleffnull/shortener/internal/app"
 	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/store"
+	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
 )
 
+func NewShortenerApp(
+	lc fx.Lifecycle,
+	storage store.Store,
+	coldStorage store.ColdStore,
+	log logger.Logger,
+	configuration *config.Configuration,
+) app.App {
+	shortener := app.NewShortenerApp(storage, coldStorage, log, configuration)
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			shortener.Init(ctx)
+			return nil
+		},
+	})
+
+	return shortener
+}
+
+func NewHTTPServer(
+	lc fx.Lifecycle,
+	router *app.Router,
+	configuration *config.Configuration,
+	log *zap.Logger,
+) *http.Server {
+	srv := &http.Server{
+		Addr:    configuration.ServerAddress,
+		Handler: router.NewMuxHandler(),
+	}
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			listener, err := net.Listen("tcp", srv.Addr)
+			if err != nil {
+				return err
+			}
+
+			log.Info("Starting HTTP server", zap.String("addr", srv.Addr))
+			go srv.Serve(listener)
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			return srv.Shutdown(ctx)
+		},
+	})
+
+	return srv
+}
+
 func main() {
-	zap, err := zap.NewDevelopment()
-	if err != nil {
-		log.Fatalf("failed to create zap logger: %v", err)
-	}
-
-	defer zap.Sync()
-	log := logger.NewZapLogger(zap)
-
-	configuration, err := config.GetConfiguration()
-	if err != nil {
-		log.Fatalf("configuration error: %v", err)
-	}
-
-	log.Infof("using configuration: %+v", configuration)
-
-	ctx := context.Background()
-	ctx = logger.ContextWithLogger(ctx, log)
-
-	storage := store.NewMemoryStore(configuration)
-	coldStorage := store.NewFileStore(configuration)
-	shortener := app.NewShortenerApp(storage, coldStorage, configuration)
-	if err = shortener.Init(ctx); err != nil {
-		log.Fatalf("failed to init application: %v", err)
-	}
-
-	handler := app.NewHandler(shortener)
-	router := app.NewRouter()
-	router.Prepare(handler)
-
-	err = router.Run(ctx, configuration)
-	if err != nil {
-		log.Fatalf("failed to start server: %v", err)
-	}
+	fx.New(
+		fx.Provide(
+			zap.NewDevelopment,
+			logger.NewZapLogger,
+			config.GetConfiguration,
+			store.NewMemoryStore,
+			store.NewFileStore,
+			NewShortenerApp,
+			app.NewHandler,
+			app.NewRouter,
+			NewHTTPServer,
+		),
+		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: log}
+		}),
+		fx.Invoke(func(*http.Server) {}),
+	).Run()
 }

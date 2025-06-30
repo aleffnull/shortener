@@ -15,12 +15,14 @@ import (
 type mock struct {
 	storage     *mocks.MockStore
 	coldStorage *mocks.MockColdStore
+	logger      *mocks.MockLogger
 }
 
 func newMock(ctrl *gomock.Controller) *mock {
 	return &mock{
 		storage:     mocks.NewMockStore(ctrl),
 		coldStorage: mocks.NewMockColdStore(ctrl),
+		logger:      mocks.NewMockLogger(ctrl),
 	}
 }
 
@@ -35,7 +37,7 @@ func TestShortenerApp_GetURL(t *testing.T) {
 	mock := newMock(ctrl)
 	mock.storage.EXPECT().Load(key).Return(shortURL, true)
 	configuration := &config.Configuration{}
-	shortener := NewShortenerApp(mock.storage, mock.coldStorage, configuration)
+	shortener := NewShortenerApp(mock.storage, mock.coldStorage, mock.logger, configuration)
 
 	// Act.
 	url, ok := shortener.GetURL(key)
@@ -125,7 +127,7 @@ func TestShortenerApp_ShortenURL(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			mock := newMock(ctrl)
 			tt.hookBefore(tt.request, mock)
-			shortener := NewShortenerApp(mock.storage, mock.coldStorage, tt.configuration)
+			shortener := NewShortenerApp(mock.storage, mock.coldStorage, mock.logger, tt.configuration)
 
 			response, err := shortener.ShortenURL(tt.request)
 			require.Equal(t, tt.response, response)
