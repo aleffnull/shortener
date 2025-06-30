@@ -14,15 +14,22 @@ import (
 type ShortenerApp struct {
 	storage       store.Store
 	coldStorage   store.ColdStore
+	logger        logger.Logger
 	configuration *config.Configuration
 }
 
 var _ App = (*ShortenerApp)(nil)
 
-func NewShortenerApp(storage store.Store, coldStorage store.ColdStore, configuration *config.Configuration) App {
+func NewShortenerApp(
+	storage store.Store,
+	coldStorage store.ColdStore,
+	logger logger.Logger,
+	configuration *config.Configuration,
+) App {
 	return &ShortenerApp{
 		storage:       storage,
 		coldStorage:   coldStorage,
+		logger:        logger,
 		configuration: configuration,
 	}
 }
@@ -37,8 +44,7 @@ func (s *ShortenerApp) Init(ctx context.Context) error {
 		s.storage.PreSave(entry.Key, entry.Value)
 	}
 
-	log := logger.LoggerFromContext(ctx)
-	log.Infof("Loaded %v entries from cold storage", len(entries))
+	s.logger.Infof("Loaded %v entries from cold storage", len(entries))
 
 	return nil
 }
