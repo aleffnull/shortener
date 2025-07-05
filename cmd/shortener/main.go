@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"net"
 	"net/http"
 
@@ -17,14 +18,17 @@ import (
 func NewShortenerApp(
 	lc fx.Lifecycle,
 	storage store.Store,
-	coldStorage store.ColdStore,
 	log logger.Logger,
 	configuration *config.Configuration,
 ) app.App {
-	shortener := app.NewShortenerApp(storage, coldStorage, log, configuration)
+	shortener := app.NewShortenerApp(storage, log, configuration)
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			shortener.Init(ctx)
+			shortener.Init()
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			shortener.Shutdown()
 			return nil
 		},
 	})
@@ -36,7 +40,7 @@ func NewHTTPServer(
 	lc fx.Lifecycle,
 	router *app.Router,
 	configuration *config.Configuration,
-	log *zap.Logger,
+	log logger.Logger,
 ) *http.Server {
 	srv := &http.Server{
 		Addr:    configuration.ServerAddress,
@@ -49,7 +53,8 @@ func NewHTTPServer(
 				return err
 			}
 
-			log.Info("Starting HTTP server", zap.String("addr", srv.Addr))
+			log.Infof("Using configuration: %v", configuration)
+			log.Infof("Starting HTTP server on %v", srv.Addr)
 			go srv.Serve(listener)
 			return nil
 		},
@@ -62,12 +67,26 @@ func NewHTTPServer(
 }
 
 func main() {
+	configuration, err := config.GetConfiguration()
+	if err != nil {
+		log.Fatalf("Failed to get application configuration: %s", err)
+	}
+
+	configurationProvider := func() *config.Configuration { return configuration }
+	storeProvider := func(coldStore store.ColdStore, logger logger.Logger) store.Store {
+		if configuration.DatabaseStore.IsDatabaseEnabled() {
+			return store.NewDatabaseStore(configuration)
+		}
+
+		return store.NewMemoryStore(coldStore, configuration, logger)
+	}
+
 	fx.New(
 		fx.Provide(
 			zap.NewDevelopment,
 			logger.NewZapLogger,
-			config.GetConfiguration,
-			store.NewMemoryStore,
+			configurationProvider,
+			storeProvider,
 			store.NewFileStore,
 			NewShortenerApp,
 			app.NewHandler,

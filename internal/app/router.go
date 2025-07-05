@@ -27,6 +27,11 @@ func NewRouter(handler *Handler, logger logger.Logger) *Router {
 func (r *Router) NewMuxHandler() http.Handler {
 	mux := chi.NewRouter()
 
+	mux.Get("/ping",
+		middleware.Log(
+			r.handler.HandlePingRequest,
+			r.logger))
+
 	mux.Get("/{key}",
 		middleware.Log(
 			setContentType(

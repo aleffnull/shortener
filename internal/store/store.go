@@ -1,17 +1,21 @@
 package store
 
+import (
+	"context"
+
+	"github.com/aleffnull/shortener/internal/pkg/models"
+)
+
 type Store interface {
+	Init() error
+	Shutdown()
+	CheckAvailability(context.Context) error
+
 	Load(key string) (string, bool)
 	Save(value string) (string, error)
-	PreSave(key, value string)
-}
-
-type ColdStoreEntry struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
 }
 
 type ColdStore interface {
-	LoadAll() ([]*ColdStoreEntry, error)
-	Save(entry *ColdStoreEntry) error
+	LoadAll() ([]*models.ColdStoreEntry, error)
+	Save(entry *models.ColdStoreEntry) error
 }

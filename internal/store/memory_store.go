@@ -1,17 +1,22 @@
 package store
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/rand/v2"
 	"sync"
 
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/pkg/logger"
+	"github.com/aleffnull/shortener/internal/pkg/models"
 )
 
 type MemoryStore struct {
-	storeMap      map[string]string
+	coldStore     ColdStore
 	configuration *config.MemoryStoreConfiguration
+	logger        logger.Logger
+	storeMap      map[string]string
 	mutex         sync.RWMutex
 }
 
@@ -21,11 +26,37 @@ const (
 	alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
-func NewMemoryStore(configuration *config.Configuration) Store {
+func NewMemoryStore(coldStore ColdStore, configuration *config.Configuration, logger logger.Logger) Store {
 	return &MemoryStore{
-		storeMap:      make(map[string]string),
+		coldStore:     coldStore,
 		configuration: configuration.MemoryStore,
+		logger:        logger,
+		storeMap:      make(map[string]string),
 	}
+}
+
+func (s *MemoryStore) Init() error {
+	entries, err := s.coldStore.LoadAll()
+	if err != nil {
+		return fmt.Errorf("InitStorage, coldStorage.LoadAll failed: %w", err)
+	}
+
+	// Called only during startup, so no need for mutex locking.
+	for _, entry := range entries {
+		s.storeMap[entry.Key] = entry.Value
+	}
+
+	s.logger.Infof("Loaded %v entries from cold storage", len(entries))
+
+	return nil
+}
+
+func (s *MemoryStore) Shutdown() {
+	// Do nothing.
+}
+
+func (s *MemoryStore) CheckAvailability(context.Context) error {
+	return nil
 }
 
 func (s *MemoryStore) Load(key string) (string, bool) {
@@ -45,13 +76,20 @@ func (s *MemoryStore) Save(value string) (string, error) {
 		return "", fmt.Errorf("failed to save value: %w", err)
 	}
 
+	// Save to hot store.
 	s.storeMap[key] = value
-	return key, nil
-}
 
-func (s *MemoryStore) PreSave(key, value string) {
-	// Called only in main goroutine, so no need for mutex locking.
-	s.storeMap[key] = value
+	// Save to cold store.
+	coldStoreEntry := &models.ColdStoreEntry{
+		Key:   key,
+		Value: value,
+	}
+	err = s.coldStore.Save(coldStoreEntry)
+	if err != nil {
+		return key, fmt.Errorf("saving to cold storage failed: %w", err)
+	}
+
+	return key, nil
 }
 
 func (s *MemoryStore) getUniqueKey() (string, error) {
