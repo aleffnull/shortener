@@ -10,9 +10,10 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
-	store "github.com/aleffnull/shortener/internal/store"
+	models "github.com/aleffnull/shortener/internal/pkg/models"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -40,6 +41,34 @@ func (m *MockStore) EXPECT() *MockStoreMockRecorder {
 	return m.recorder
 }
 
+// CheckAvailability mocks base method.
+func (m *MockStore) CheckAvailability(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckAvailability", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckAvailability indicates an expected call of CheckAvailability.
+func (mr *MockStoreMockRecorder) CheckAvailability(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAvailability", reflect.TypeOf((*MockStore)(nil).CheckAvailability), arg0)
+}
+
+// Init mocks base method.
+func (m *MockStore) Init() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Init")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Init indicates an expected call of Init.
+func (mr *MockStoreMockRecorder) Init() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockStore)(nil).Init))
+}
+
 // Load mocks base method.
 func (m *MockStore) Load(key string) (string, bool) {
 	m.ctrl.T.Helper()
@@ -55,18 +84,6 @@ func (mr *MockStoreMockRecorder) Load(key any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockStore)(nil).Load), key)
 }
 
-// PreSave mocks base method.
-func (m *MockStore) PreSave(key, value string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "PreSave", key, value)
-}
-
-// PreSave indicates an expected call of PreSave.
-func (mr *MockStoreMockRecorder) PreSave(key, value any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreSave", reflect.TypeOf((*MockStore)(nil).PreSave), key, value)
-}
-
 // Save mocks base method.
 func (m *MockStore) Save(value string) (string, error) {
 	m.ctrl.T.Helper()
@@ -80,6 +97,18 @@ func (m *MockStore) Save(value string) (string, error) {
 func (mr *MockStoreMockRecorder) Save(value any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockStore)(nil).Save), value)
+}
+
+// Shutdown mocks base method.
+func (m *MockStore) Shutdown() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Shutdown")
+}
+
+// Shutdown indicates an expected call of Shutdown.
+func (mr *MockStoreMockRecorder) Shutdown() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Shutdown", reflect.TypeOf((*MockStore)(nil).Shutdown))
 }
 
 // MockColdStore is a mock of ColdStore interface.
@@ -107,10 +136,10 @@ func (m *MockColdStore) EXPECT() *MockColdStoreMockRecorder {
 }
 
 // LoadAll mocks base method.
-func (m *MockColdStore) LoadAll() ([]*store.ColdStoreEntry, error) {
+func (m *MockColdStore) LoadAll() ([]*models.ColdStoreEntry, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LoadAll")
-	ret0, _ := ret[0].([]*store.ColdStoreEntry)
+	ret0, _ := ret[0].([]*models.ColdStoreEntry)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -122,7 +151,7 @@ func (mr *MockColdStoreMockRecorder) LoadAll() *gomock.Call {
 }
 
 // Save mocks base method.
-func (m *MockColdStore) Save(entry *store.ColdStoreEntry) error {
+func (m *MockColdStore) Save(entry *models.ColdStoreEntry) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Save", entry)
 	ret0, _ := ret[0].(error)

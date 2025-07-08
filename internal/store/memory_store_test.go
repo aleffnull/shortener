@@ -4,11 +4,28 @@ import (
 	"testing"
 
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/pkg/mocks"
+	"github.com/aleffnull/shortener/internal/pkg/models"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
+
+type mock struct {
+	coldStore *mocks.MockColdStore
+	logger    *mocks.MockLogger
+}
+
+func newMock(ctrl *gomock.Controller) *mock {
+	return &mock{
+		coldStore: mocks.NewMockColdStore(ctrl),
+		logger:    mocks.NewMockLogger(ctrl),
+	}
+}
 
 func TestMemoryStore_Load_UnknownKey(t *testing.T) {
 	// Arrange.
+	ctrl := gomock.NewController(t)
+	mock := newMock(ctrl)
 	configuration := &config.Configuration{
 		MemoryStore: &config.MemoryStoreConfiguration{
 			KeyLength:        8,
@@ -16,7 +33,7 @@ func TestMemoryStore_Load_UnknownKey(t *testing.T) {
 			KeyMaxIterations: 10,
 		},
 	}
-	store := NewMemoryStore(configuration)
+	store := NewMemoryStore(mock.coldStore, configuration, mock.logger)
 
 	// Act.
 	value, ok := store.Load("foo")
@@ -28,6 +45,9 @@ func TestMemoryStore_Load_UnknownKey(t *testing.T) {
 
 func TestMemoryStore_SaveAndLoad(t *testing.T) {
 	// Arrange.
+	ctrl := gomock.NewController(t)
+	mock := newMock(ctrl)
+	mock.coldStore.EXPECT().Save(gomock.Any()).Return(nil)
 	configuration := &config.Configuration{
 		MemoryStore: &config.MemoryStoreConfiguration{
 			KeyLength:        8,
@@ -35,7 +55,7 @@ func TestMemoryStore_SaveAndLoad(t *testing.T) {
 			KeyMaxIterations: 10,
 		},
 	}
-	store := NewMemoryStore(configuration)
+	store := NewMemoryStore(mock.coldStore, configuration, mock.logger)
 
 	// Act.
 	key, err := store.Save("foo")
@@ -48,8 +68,17 @@ func TestMemoryStore_SaveAndLoad(t *testing.T) {
 	require.Equal(t, "foo", value)
 }
 
-func TestMemoryStore_PreSaveAndLoad(t *testing.T) {
+func TestMemoryStore_InitAndLoad(t *testing.T) {
 	// Arrange.
+	ctrl := gomock.NewController(t)
+	mock := newMock(ctrl)
+	mock.coldStore.EXPECT().LoadAll().Return([]*models.ColdStoreEntry{
+		{
+			Key:   "key",
+			Value: "foo",
+		},
+	}, nil)
+	mock.logger.EXPECT().Infof(gomock.Any(), gomock.Any())
 	configuration := &config.Configuration{
 		MemoryStore: &config.MemoryStoreConfiguration{
 			KeyLength:        8,
@@ -57,10 +86,11 @@ func TestMemoryStore_PreSaveAndLoad(t *testing.T) {
 			KeyMaxIterations: 10,
 		},
 	}
-	store := NewMemoryStore(configuration)
+	store := NewMemoryStore(mock.coldStore, configuration, mock.logger)
 
 	// Act.
-	store.PreSave("key", "foo")
+	err := store.Init()
+	require.NoError(t, err)
 	value, ok := store.Load("key")
 
 	// Assert.
@@ -70,6 +100,9 @@ func TestMemoryStore_PreSaveAndLoad(t *testing.T) {
 
 func TestMemoryStore_Save_NotUniqueKey(t *testing.T) {
 	// Arrange.
+	ctrl := gomock.NewController(t)
+	mock := newMock(ctrl)
+	mock.coldStore.EXPECT().Save(gomock.Any()).Return(nil).AnyTimes()
 	configuration := &config.Configuration{
 		MemoryStore: &config.MemoryStoreConfiguration{
 			KeyLength:        1,
@@ -77,7 +110,7 @@ func TestMemoryStore_Save_NotUniqueKey(t *testing.T) {
 			KeyMaxIterations: 1,
 		},
 	}
-	store := NewMemoryStore(configuration)
+	store := NewMemoryStore(mock.coldStore, configuration, mock.logger)
 
 	// Act.
 	var err error
@@ -94,6 +127,9 @@ func TestMemoryStore_Save_NotUniqueKey(t *testing.T) {
 
 func TestMemoryStore_Save_KeyLengthIsDoubled(t *testing.T) {
 	// Arrange.
+	ctrl := gomock.NewController(t)
+	mock := newMock(ctrl)
+	mock.coldStore.EXPECT().Save(gomock.Any()).Return(nil).AnyTimes()
 	configuration := &config.Configuration{
 		MemoryStore: &config.MemoryStoreConfiguration{
 			KeyLength:        1,
@@ -101,7 +137,7 @@ func TestMemoryStore_Save_KeyLengthIsDoubled(t *testing.T) {
 			KeyMaxIterations: 1,
 		},
 	}
-	store := NewMemoryStore(configuration)
+	store := NewMemoryStore(mock.coldStore, configuration, mock.logger)
 
 	// Act.
 	var key string

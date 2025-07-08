@@ -87,3 +87,13 @@ func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.R
 		return
 	}
 }
+
+func (h *Handler) HandlePingRequest(response http.ResponseWriter, request *http.Request) {
+	err := h.shortener.CheckStore(request.Context())
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response.WriteHeader(http.StatusOK)
+}

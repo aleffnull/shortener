@@ -41,6 +41,20 @@ func (m *MockApp) EXPECT() *MockAppMockRecorder {
 	return m.recorder
 }
 
+// CheckStore mocks base method.
+func (m *MockApp) CheckStore(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckStore", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckStore indicates an expected call of CheckStore.
+func (mr *MockAppMockRecorder) CheckStore(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckStore", reflect.TypeOf((*MockApp)(nil).CheckStore), arg0)
+}
+
 // GetURL mocks base method.
 func (m *MockApp) GetURL(key string) (string, bool) {
 	m.ctrl.T.Helper()
@@ -57,17 +71,17 @@ func (mr *MockAppMockRecorder) GetURL(key any) *gomock.Call {
 }
 
 // Init mocks base method.
-func (m *MockApp) Init(arg0 context.Context) error {
+func (m *MockApp) Init() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", arg0)
+	ret := m.ctrl.Call(m, "Init")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockAppMockRecorder) Init(arg0 any) *gomock.Call {
+func (mr *MockAppMockRecorder) Init() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockApp)(nil).Init), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockApp)(nil).Init))
 }
 
 // ShortenURL mocks base method.
@@ -83,4 +97,16 @@ func (m *MockApp) ShortenURL(request *models.ShortenRequest) (*models.ShortenRes
 func (mr *MockAppMockRecorder) ShortenURL(request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShortenURL", reflect.TypeOf((*MockApp)(nil).ShortenURL), request)
+}
+
+// Shutdown mocks base method.
+func (m *MockApp) Shutdown() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Shutdown")
+}
+
+// Shutdown indicates an expected call of Shutdown.
+func (mr *MockAppMockRecorder) Shutdown() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Shutdown", reflect.TypeOf((*MockApp)(nil).Shutdown))
 }

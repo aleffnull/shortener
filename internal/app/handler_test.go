@@ -266,3 +266,45 @@ func TestHandler_HandleAPIRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestHandler_HandlePingRequest(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		hookBefore func(app *mocks.MockApp)
+	}{
+		{
+			name:       "database error",
+			statusCode: http.StatusInternalServerError,
+			hookBefore: func(app *mocks.MockApp) {
+				app.EXPECT().CheckStore(gomock.Any()).Return(assert.AnError)
+			},
+		},
+		{
+			name:       "ok",
+			statusCode: http.StatusOK,
+			hookBefore: func(app *mocks.MockApp) {
+				app.EXPECT().CheckStore(gomock.Any()).Return(nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodGet, "/ping", nil)
+			ctrl := gomock.NewController(t)
+			shortener := mocks.NewMockApp(ctrl)
+			handler := NewHandler(shortener)
+			tt.hookBefore(shortener)
+
+			// Act.
+			handler.HandlePingRequest(recorder, request)
+
+			// Assert.
+			result := recorder.Result()
+			require.Equal(t, tt.statusCode, result.StatusCode)
+			defer result.Body.Close()
+		})
+	}
+}
