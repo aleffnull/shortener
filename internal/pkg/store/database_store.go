@@ -8,9 +8,11 @@ import (
 
 	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
+	"github.com/aleffnull/shortener/internal/pkg/models"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -32,7 +34,6 @@ func NewDatabaseStore(configuration *config.Configuration, logger logger.Logger)
 		configuration: configuration.DatabaseStore,
 		logger:        logger,
 	}
-	store.keyStore.saver = store.saver
 
 	return store
 }
@@ -108,23 +109,53 @@ func (s *DatabaseStore) Load(ctx context.Context, key string) (string, bool, err
 }
 
 func (s *DatabaseStore) Save(ctx context.Context, value string) (string, error) {
-	key, err := s.saveWithUniqueKey(ctx, value)
+	key, err := doInTx(ctx, s.db, func(ctx context.Context, tx *sql.Tx) (string, error) {
+		return s.saveWithUniqueKey(ctx, value, func(ctx context.Context, key, value string) (bool, error) {
+			return s.saver(ctx, tx, key, value)
+		})
+	})
+
 	if err != nil {
-		return "", fmt.Errorf("DatabaseStore.Save, saveWithUniqueKey failed: %w", err)
+		return "", fmt.Errorf("Save, doInTx failed: %w", err)
 	}
 
 	return key, nil
 }
 
-func (s *DatabaseStore) saver(ctx context.Context, key, value string) (bool, error) {
-	result, err := s.db.ExecContext(
+func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*models.BatchRequestItem) ([]*models.BatchResponseItem, error) {
+	responseItems, err := doInTx(ctx, s.db, func(ctx context.Context, tx *sql.Tx) ([]*models.BatchResponseItem, error) {
+		responseItems := make([]*models.BatchResponseItem, 0, len(requestItems))
+		for _, requestItem := range requestItems {
+			key, err := s.saveWithUniqueKey(ctx, requestItem.OriginalURL, func(ctx context.Context, key, value string) (bool, error) {
+				return s.saver(ctx, tx, key, value)
+			})
+			if err != nil {
+				return nil, fmt.Errorf("SaveBatch, saveWithUniqueKey failed: %w", err)
+			}
+			responseItems = append(responseItems, &models.BatchResponseItem{
+				CorelationID: requestItem.CorelationID,
+				Key:          key,
+			})
+		}
+		return responseItems, nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("SaveBatch, doInTx failed: %w", err)
+	}
+
+	return responseItems, nil
+}
+
+func (s *DatabaseStore) saver(ctx context.Context, tx *sql.Tx, key, value string) (bool, error) {
+	result, err := tx.ExecContext(
 		ctx,
 		"insert into urls (url_key, origin_url) values ($1, $2)",
 		key, value,
 	)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
 			// Unique key violation
 			return true, nil
 		}
@@ -141,4 +172,27 @@ func (s *DatabaseStore) saver(ctx context.Context, key, value string) (bool, err
 	}
 
 	return false, nil
+}
+
+func doInTx[T any](ctx context.Context, db *sql.DB, worker func(context.Context, *sql.Tx) (T, error)) (T, error) {
+	var emptyResult T
+
+	tx, err := db.Begin()
+	if err != nil {
+		return emptyResult, fmt.Errorf("doInTx, db.Begin failed: %w", err)
+	}
+
+	result, err := worker(ctx, tx)
+	if err != nil {
+		if txErr := tx.Rollback(); txErr != nil {
+			err = errors.Join(err, fmt.Errorf("doInTx, tx.Rollback failed: %w", txErr))
+		}
+		return emptyResult, fmt.Errorf("doInTx, saveWithUniqueKey failed: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return emptyResult, fmt.Errorf("doInTx, tx.Commit failed: %w", err)
+	}
+
+	return result, nil
 }

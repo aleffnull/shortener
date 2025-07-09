@@ -13,6 +13,7 @@ type Store interface {
 
 	Load(context.Context, string) (string, bool, error)
 	Save(context.Context, string) (string, error)
+	SaveBatch(context.Context, []*models.BatchRequestItem) ([]*models.BatchResponseItem, error)
 }
 
 type ColdStore interface {

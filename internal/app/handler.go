@@ -92,6 +92,34 @@ func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.R
 	}
 }
 
+func (h *Handler) HandleAPIBatchRequest(response http.ResponseWriter, request *http.Request) {
+	var requestItems []*models.ShortenBatchRequestItem
+	if err := json.NewDecoder(request.Body).Decode(&requestItems); err != nil {
+		http.Error(response, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := validate.Var(requestItems, "omitempty,dive"); err != nil {
+		http.Error(response, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	shortenerBatchResponse, err := h.shortener.ShortenURLBatch(request.Context(), requestItems)
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response.Header().Set(headers.ContentType, mimetype.ApplicationJSON)
+	response.WriteHeader(http.StatusCreated)
+
+	if err = json.NewEncoder(response).Encode(shortenerBatchResponse); err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 func (h *Handler) HandlePingRequest(response http.ResponseWriter, request *http.Request) {
 	err := h.shortener.CheckStore(request.Context())
 	if err != nil {

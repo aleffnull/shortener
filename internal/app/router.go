@@ -56,6 +56,13 @@ func (r *Router) NewMuxHandler() http.Handler {
 				mimetype.ApplicationJSON, mimetypeApplicationGZIP),
 			r.logger))
 
+	mux.Post("/api/shorten/batch",
+		middleware.Log(
+			setContentType(
+				middleware.GzipHandler(r.handler.HandleAPIBatchRequest),
+				mimetype.ApplicationJSON, mimetypeApplicationGZIP),
+			r.logger))
+
 	return mux
 }
 

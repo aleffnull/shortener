@@ -13,18 +13,19 @@ const (
 	alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
+type saverFunc func(ctx context.Context, key, value string) (bool, error)
+
 type keyStore struct {
 	configuration *config.KeyStoreConfiguration
-	saver         func(ctx context.Context, key, value string) (bool, error)
 }
 
-func (s *keyStore) saveWithUniqueKey(ctx context.Context, value string) (string, error) {
+func (s *keyStore) saveWithUniqueKey(ctx context.Context, value string, saver saverFunc) (string, error) {
 	length := s.configuration.KeyLength
 	i := 0
 
 	for length <= s.configuration.KeyMaxLength {
 		key := randomString(length)
-		exists, err := s.saver(ctx, key, value)
+		exists, err := saver(ctx, key, value)
 		if err != nil {
 			return "", fmt.Errorf("saveWithUniqueKey, saver failed: %w", err)
 		}

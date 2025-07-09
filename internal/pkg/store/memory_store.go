@@ -31,7 +31,6 @@ func NewMemoryStore(coldStore ColdStore, configuration *config.Configuration, lo
 		logger:        logger,
 		storeMap:      make(map[string]string),
 	}
-	store.keyStore.saver = store.saver
 
 	return store
 }
@@ -72,8 +71,32 @@ func (s *MemoryStore) Save(ctx context.Context, value string) (string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	return s.saveValue(ctx, value)
+}
+
+func (s *MemoryStore) SaveBatch(ctx context.Context, requestItems []*models.BatchRequestItem) ([]*models.BatchResponseItem, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	responseItems := make([]*models.BatchResponseItem, 0, len(requestItems))
+	for _, requestItem := range requestItems {
+		key, err := s.saveValue(ctx, requestItem.OriginalURL)
+		if err != nil {
+			return nil, fmt.Errorf("SaveBatch, saveValue failed: %w", err)
+		}
+
+		responseItems = append(responseItems, &models.BatchResponseItem{
+			CorelationID: requestItem.CorelationID,
+			Key:          key,
+		})
+	}
+
+	return responseItems, nil
+}
+
+func (s *MemoryStore) saveValue(ctx context.Context, value string) (string, error) {
 	// Save to hot store.
-	key, err := s.saveWithUniqueKey(ctx, value)
+	key, err := s.saveWithUniqueKey(ctx, value, s.saver)
 	if err != nil {
 		return "", fmt.Errorf("MemoryStore.Save, saveWithUniqueKey failed: %w", err)
 	}

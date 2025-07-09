@@ -7,8 +7,10 @@ import (
 
 	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
+	pkg_models "github.com/aleffnull/shortener/internal/pkg/models"
 	"github.com/aleffnull/shortener/internal/pkg/store"
 	"github.com/aleffnull/shortener/models"
+	"github.com/samber/lo"
 )
 
 type ShortenerApp struct {
@@ -48,17 +50,49 @@ func (s *ShortenerApp) ShortenURL(ctx context.Context, request *models.ShortenRe
 	longURL := request.URL
 	key, err := s.storage.Save(ctx, longURL)
 	if err != nil {
-		return nil, fmt.Errorf("saving to storage failed: %w", err)
+		return nil, fmt.Errorf("ShortenURL, storage.Save failed: %w", err)
 	}
 
 	shortURL, err := url.JoinPath(s.configuration.BaseURL, key)
 	if err != nil {
-		return nil, fmt.Errorf("URL joining failed: %w", err)
+		return nil, fmt.Errorf("ShortenURL, url.JoinPath: %w", err)
 	}
 
 	return &models.ShortenResponse{
 		Result: shortURL,
 	}, nil
+}
+
+func (s *ShortenerApp) ShortenURLBatch(ctx context.Context, requestItems []*models.ShortenBatchRequestItem) ([]*models.ShortenBatchResponseItem, error) {
+	if len(requestItems) == 0 {
+		return []*models.ShortenBatchResponseItem{}, nil
+	}
+
+	requestModels := lo.Map(requestItems, func(item *models.ShortenBatchRequestItem, _ int) *pkg_models.BatchRequestItem {
+		return &pkg_models.BatchRequestItem{
+			CorelationID: item.CorelationID,
+			OriginalURL:  item.OriginalURL,
+		}
+	})
+	responseModels, err := s.storage.SaveBatch(ctx, requestModels)
+	if err != nil {
+		return nil, fmt.Errorf("ShortenURLBatch, storage.SaveBatch: %w", err)
+	}
+
+	responseItems := make([]*models.ShortenBatchResponseItem, 0, len(requestItems))
+	for _, responseModel := range responseModels {
+		shortURL, err := url.JoinPath(s.configuration.BaseURL, responseModel.Key)
+		if err != nil {
+			return nil, fmt.Errorf("ShortenURL, url.JoinPath: %w", err)
+		}
+
+		responseItems = append(responseItems, &models.ShortenBatchResponseItem{
+			CorelationID: responseModel.CorelationID,
+			ShortURL:     shortURL,
+		})
+	}
+
+	return responseItems, nil
 }
 
 func (s *ShortenerApp) CheckStore(ctx context.Context) error {

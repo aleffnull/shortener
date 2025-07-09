@@ -100,6 +100,21 @@ func (mr *MockAppMockRecorder) ShortenURL(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShortenURL", reflect.TypeOf((*MockApp)(nil).ShortenURL), arg0, arg1)
 }
 
+// ShortenURLBatch mocks base method.
+func (m *MockApp) ShortenURLBatch(arg0 context.Context, arg1 []*models.ShortenBatchRequestItem) ([]*models.ShortenBatchResponseItem, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ShortenURLBatch", arg0, arg1)
+	ret0, _ := ret[0].([]*models.ShortenBatchResponseItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ShortenURLBatch indicates an expected call of ShortenURLBatch.
+func (mr *MockAppMockRecorder) ShortenURLBatch(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShortenURLBatch", reflect.TypeOf((*MockApp)(nil).ShortenURLBatch), arg0, arg1)
+}
+
 // Shutdown mocks base method.
 func (m *MockApp) Shutdown() {
 	m.ctrl.T.Helper()

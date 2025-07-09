@@ -35,4 +35,6 @@ autotest: build
 	shortenertestbeta -test.v -test.run=^TestIteration9$$  -binary-path=$(EXE) -source-path=. -file-storage-path=$(FILE_STORAGE)
 	shortenertestbeta -test.v -test.run=^TestIteration10$$ -binary-path=$(EXE) -source-path=. -database-dsn=$(DATABASE_CONN_STRING)
 	shortenertestbeta -test.v -test.run=^TestIteration11$$ -binary-path=$(EXE) -database-dsn=$(DATABASE_CONN_STRING)
+	shortenertestbeta -test.v -test.run=^TestIteration12$$ -binary-path=$(EXE) -database-dsn=$(DATABASE_CONN_STRING)
+
 test: unittest statictest autotest
