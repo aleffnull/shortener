@@ -14,7 +14,7 @@ run:
 
 mock:
 	mockgen -source internal/app/app.go -destination internal/pkg/mocks/mock_app.go -package mocks
-	mockgen -source internal/store/store.go -destination internal/pkg/mocks/mock_store.go -package mocks
+	mockgen -source internal/pkg/store/store.go -destination internal/pkg/mocks/mock_store.go -package mocks
 	mockgen -source internal/pkg/logger/logger.go -destination internal/pkg/mocks/mock_logger.go -package mocks
 
 unittest:
@@ -34,5 +34,5 @@ autotest: build
 	shortenertestbeta -test.v -test.run=^TestIteration8$$  -binary-path=$(EXE)
 	shortenertestbeta -test.v -test.run=^TestIteration9$$  -binary-path=$(EXE) -source-path=. -file-storage-path=$(FILE_STORAGE)
 	shortenertestbeta -test.v -test.run=^TestIteration10$$ -binary-path=$(EXE) -source-path=. -database-dsn=$(DATABASE_CONN_STRING)
-
+	shortenertestbeta -test.v -test.run=^TestIteration11$$ -binary-path=$(EXE) -database-dsn=$(DATABASE_CONN_STRING)
 test: unittest statictest autotest

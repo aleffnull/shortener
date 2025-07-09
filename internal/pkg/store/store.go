@@ -11,11 +11,11 @@ type Store interface {
 	Shutdown()
 	CheckAvailability(context.Context) error
 
-	Load(key string) (string, bool)
-	Save(value string) (string, error)
+	Load(context.Context, string) (string, bool, error)
+	Save(context.Context, string) (string, error)
 }
 
 type ColdStore interface {
 	LoadAll() ([]*models.ColdStoreEntry, error)
-	Save(entry *models.ColdStoreEntry) error
+	Save(*models.ColdStoreEntry) error
 }

@@ -37,7 +37,7 @@ func (r *Router) NewMuxHandler() http.Handler {
 			setContentType(
 				func(writer http.ResponseWriter, request *http.Request) {
 					key := chi.URLParam(request, "key")
-					r.handler.HandleGetRequest(writer, key)
+					r.handler.HandleGetRequest(writer, request, key)
 				},
 				mimetype.TextPlain),
 			r.logger))

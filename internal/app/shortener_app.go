@@ -7,10 +7,8 @@ import (
 
 	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
-	"github.com/aleffnull/shortener/internal/store"
+	"github.com/aleffnull/shortener/internal/pkg/store"
 	"github.com/aleffnull/shortener/models"
-
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type ShortenerApp struct {
@@ -42,14 +40,13 @@ func (s *ShortenerApp) Shutdown() {
 	s.storage.Shutdown()
 }
 
-func (s *ShortenerApp) GetURL(key string) (string, bool) {
-	url, ok := s.storage.Load(key)
-	return url, ok
+func (s *ShortenerApp) GetURL(ctx context.Context, key string) (string, bool, error) {
+	return s.storage.Load(ctx, key)
 }
 
-func (s *ShortenerApp) ShortenURL(request *models.ShortenRequest) (*models.ShortenResponse, error) {
+func (s *ShortenerApp) ShortenURL(ctx context.Context, request *models.ShortenRequest) (*models.ShortenResponse, error) {
 	longURL := request.URL
-	key, err := s.storage.Save(longURL)
+	key, err := s.storage.Save(ctx, longURL)
 	if err != nil {
 		return nil, fmt.Errorf("saving to storage failed: %w", err)
 	}

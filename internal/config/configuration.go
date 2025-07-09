@@ -69,13 +69,11 @@ func GetConfiguration() (*Configuration, error) {
 				envConfig.FileStore.FilePath,
 				flagConfig.FileStore.FilePath),
 		},
-		DatabaseStore: &DatabaseStoreConfiguration{
-			DataSourceName: lo.Ternary(
-				len(envConfig.DatabaseStore.DataSourceName) > 0,
-				envConfig.DatabaseStore.DataSourceName,
-				flagConfig.DatabaseStore.DataSourceName,
-			),
-		},
+		DatabaseStore: NewDatabaseStoreConfiguration(lo.Ternary(
+			len(envConfig.DatabaseStore.DataSourceName) > 0,
+			envConfig.DatabaseStore.DataSourceName,
+			flagConfig.DatabaseStore.DataSourceName,
+		)),
 	}
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	err = validate.Struct(configuration)

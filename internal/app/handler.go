@@ -22,8 +22,12 @@ func NewHandler(shortener App) *Handler {
 	}
 }
 
-func (h *Handler) HandleGetRequest(response http.ResponseWriter, key string) {
-	value, ok := h.shortener.GetURL(key)
+func (h *Handler) HandleGetRequest(response http.ResponseWriter, request *http.Request, key string) {
+	value, ok, err := h.shortener.GetURL(request.Context(), key)
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	if !ok {
 		http.Error(response, "Key was not found", http.StatusBadRequest)
 		return
@@ -49,7 +53,7 @@ func (h *Handler) HandlePostRequest(response http.ResponseWriter, request *http.
 	shortenRequest := &models.ShortenRequest{
 		URL: longURL,
 	}
-	shortenerResponse, err := h.shortener.ShortenURL(shortenRequest)
+	shortenerResponse, err := h.shortener.ShortenURL(request.Context(), shortenRequest)
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
 		return
@@ -73,7 +77,7 @@ func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.R
 		return
 	}
 
-	shortenerResponse, err := h.shortener.ShortenURL(&shortenRequest)
+	shortenerResponse, err := h.shortener.ShortenURL(request.Context(), &shortenRequest)
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
 		return

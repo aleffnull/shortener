@@ -39,7 +39,7 @@ func TestHandler_HandleGetRequest(t *testing.T) {
 				emptyBody:  false,
 			},
 			hookBefore: func(key string, app *mocks.MockApp) {
-				app.EXPECT().GetURL(key).Return("", false)
+				app.EXPECT().GetURL(gomock.Any(), key).Return("", false, nil)
 			},
 		},
 		{
@@ -53,7 +53,7 @@ func TestHandler_HandleGetRequest(t *testing.T) {
 				emptyBody: true,
 			},
 			hookBefore: func(key string, app *mocks.MockApp) {
-				app.EXPECT().GetURL(key).Return("http://bar.buz", true)
+				app.EXPECT().GetURL(gomock.Any(), key).Return("http://bar.buz", true, nil)
 			},
 		},
 	}
@@ -62,13 +62,14 @@ func TestHandler_HandleGetRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange.
 			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodGet, "/foo", nil)
 			ctrl := gomock.NewController(t)
 			shortener := mocks.NewMockApp(ctrl)
 			handler := NewHandler(shortener)
 			tt.hookBefore(tt.key, shortener)
 
 			// Act.
-			handler.HandleGetRequest(recorder, tt.key)
+			handler.HandleGetRequest(recorder, request, tt.key)
 
 			// Assert.
 			result := recorder.Result()
@@ -120,7 +121,7 @@ func TestHandler_HandlePostRequest(t *testing.T) {
 				shortenRequest := &models.ShortenRequest{
 					URL: longURL,
 				}
-				app.EXPECT().ShortenURL(shortenRequest).Return(nil, assert.AnError)
+				app.EXPECT().ShortenURL(gomock.Any(), shortenRequest).Return(nil, assert.AnError)
 			},
 		},
 		{
@@ -134,7 +135,7 @@ func TestHandler_HandlePostRequest(t *testing.T) {
 				shortenRequest := &models.ShortenRequest{
 					URL: longURL,
 				}
-				app.EXPECT().ShortenURL(shortenRequest).Return(&models.ShortenResponse{
+				app.EXPECT().ShortenURL(gomock.Any(), shortenRequest).Return(&models.ShortenResponse{
 					Result: "http://localhost/abc",
 				}, nil)
 			},
@@ -208,7 +209,7 @@ func TestHandler_HandleAPIRequest(t *testing.T) {
 				statusCode: http.StatusInternalServerError,
 			},
 			hookBefore: func(shortenRequest *models.ShortenRequest, app *mocks.MockApp) {
-				app.EXPECT().ShortenURL(shortenRequest).Return(nil, assert.AnError)
+				app.EXPECT().ShortenURL(gomock.Any(), shortenRequest).Return(nil, assert.AnError)
 			},
 		},
 		{
@@ -221,7 +222,7 @@ func TestHandler_HandleAPIRequest(t *testing.T) {
 				validateURL: true,
 			},
 			hookBefore: func(shortenRequest *models.ShortenRequest, app *mocks.MockApp) {
-				app.EXPECT().ShortenURL(shortenRequest).Return(&models.ShortenResponse{
+				app.EXPECT().ShortenURL(gomock.Any(), shortenRequest).Return(&models.ShortenResponse{
 					Result: "http://localhost/abc",
 				}, nil)
 			},

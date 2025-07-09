@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -9,7 +10,7 @@ import (
 	"github.com/aleffnull/shortener/internal/app"
 	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
-	"github.com/aleffnull/shortener/internal/store"
+	"github.com/aleffnull/shortener/internal/pkg/store"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
@@ -24,7 +25,10 @@ func NewShortenerApp(
 	shortener := app.NewShortenerApp(storage, log, configuration)
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			shortener.Init()
+			err := shortener.Init()
+			if err != nil {
+				return fmt.Errorf("application initialization failed: %w", err)
+			}
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
@@ -75,7 +79,7 @@ func main() {
 	configurationProvider := func() *config.Configuration { return configuration }
 	storeProvider := func(coldStore store.ColdStore, logger logger.Logger) store.Store {
 		if configuration.DatabaseStore.IsDatabaseEnabled() {
-			return store.NewDatabaseStore(configuration)
+			return store.NewDatabaseStore(configuration, logger)
 		}
 
 		return store.NewMemoryStore(coldStore, configuration, logger)
