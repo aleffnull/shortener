@@ -22,8 +22,12 @@ func NewHandler(shortener App) *Handler {
 	}
 }
 
-func (h *Handler) HandleGetRequest(response http.ResponseWriter, key string) {
-	value, ok := h.shortener.GetURL(key)
+func (h *Handler) HandleGetRequest(response http.ResponseWriter, request *http.Request, key string) {
+	value, ok, err := h.shortener.GetURL(request.Context(), key)
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	if !ok {
 		http.Error(response, "Key was not found", http.StatusBadRequest)
 		return
@@ -49,7 +53,7 @@ func (h *Handler) HandlePostRequest(response http.ResponseWriter, request *http.
 	shortenRequest := &models.ShortenRequest{
 		URL: longURL,
 	}
-	shortenerResponse, err := h.shortener.ShortenURL(shortenRequest)
+	shortenerResponse, err := h.shortener.ShortenURL(request.Context(), shortenRequest)
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
 		return
@@ -73,7 +77,7 @@ func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.R
 		return
 	}
 
-	shortenerResponse, err := h.shortener.ShortenURL(&shortenRequest)
+	shortenerResponse, err := h.shortener.ShortenURL(request.Context(), &shortenRequest)
 	if err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)
 		return
@@ -86,4 +90,42 @@ func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.R
 		http.Error(response, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *Handler) HandleAPIBatchRequest(response http.ResponseWriter, request *http.Request) {
+	var requestItems []*models.ShortenBatchRequestItem
+	if err := json.NewDecoder(request.Body).Decode(&requestItems); err != nil {
+		http.Error(response, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := validate.Var(requestItems, "omitempty,dive"); err != nil {
+		http.Error(response, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	shortenerBatchResponse, err := h.shortener.ShortenURLBatch(request.Context(), requestItems)
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response.Header().Set(headers.ContentType, mimetype.ApplicationJSON)
+	response.WriteHeader(http.StatusCreated)
+
+	if err = json.NewEncoder(response).Encode(shortenerBatchResponse); err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *Handler) HandlePingRequest(response http.ResponseWriter, request *http.Request) {
+	err := h.shortener.CheckStore(request.Context())
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response.WriteHeader(http.StatusOK)
 }
