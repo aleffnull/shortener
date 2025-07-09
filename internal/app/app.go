@@ -7,7 +7,9 @@ import (
 )
 
 type App interface {
-	Init(context.Context) error
-	GetURL(key string) (string, bool)
-	ShortenURL(request *models.ShortenRequest) (*models.ShortenResponse, error)
+	Init() error
+	Shutdown()
+	GetURL(context.Context, string) (string, bool, error)
+	ShortenURL(context.Context, *models.ShortenRequest) (*models.ShortenResponse, error)
+	CheckStore(context.Context) error
 }

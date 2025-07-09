@@ -11,10 +11,11 @@ import (
 )
 
 type Configuration struct {
-	ServerAddress string                    `env:"SERVER_ADDRESS" validate:"required,hostname_port"`
-	BaseURL       string                    `env:"BASE_URL" validate:"required,url"`
-	MemoryStore   *MemoryStoreConfiguration `validate:"required"`
-	FileStore     *FileStoreConfiguration   `validate:"required"`
+	ServerAddress string                      `env:"SERVER_ADDRESS" validate:"required,hostname_port"`
+	BaseURL       string                      `env:"BASE_URL" validate:"required,url"`
+	MemoryStore   *MemoryStoreConfiguration   `validate:"required"`
+	FileStore     *FileStoreConfiguration     `validate:"required"`
+	DatabaseStore *DatabaseStoreConfiguration `validate:"required"`
 }
 
 func (c *Configuration) String() string {
@@ -35,6 +36,12 @@ func (c *Configuration) String() string {
 		fmt.Fprintf(sb, " FileStore:<nil>")
 	} else {
 		fmt.Fprintf(sb, " FileStore:%v", c.FileStore)
+	}
+
+	if c.DatabaseStore == nil {
+		fmt.Fprintf(sb, " DatabaseStore:<nil>")
+	} else {
+		fmt.Fprintf(sb, " DatabaseStore:%v", c.DatabaseStore)
 	}
 
 	fmt.Fprintf(sb, "}")
@@ -62,6 +69,11 @@ func GetConfiguration() (*Configuration, error) {
 				envConfig.FileStore.FilePath,
 				flagConfig.FileStore.FilePath),
 		},
+		DatabaseStore: NewDatabaseStoreConfiguration(lo.Ternary(
+			len(envConfig.DatabaseStore.DataSourceName) > 0,
+			envConfig.DatabaseStore.DataSourceName,
+			flagConfig.DatabaseStore.DataSourceName,
+		)),
 	}
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	err = validate.Struct(configuration)
@@ -74,12 +86,14 @@ func GetConfiguration() (*Configuration, error) {
 
 func parseFlags() (*Configuration, error) {
 	configuration := &Configuration{
-		FileStore: &FileStoreConfiguration{},
+		FileStore:     &FileStoreConfiguration{},
+		DatabaseStore: &DatabaseStoreConfiguration{},
 	}
 
 	flag.StringVar(&configuration.ServerAddress, "a", "localhost:8080", "address and port of running server")
 	flag.StringVar(&configuration.BaseURL, "b", "http://localhost:8080", "short link base URL")
 	flag.StringVar(&configuration.FileStore.FilePath, "f", "shortener.jsonl", "path to storage file")
+	flag.StringVar(&configuration.DatabaseStore.DataSourceName, "d", "", "data source name")
 	flag.Parse()
 
 	return configuration, nil
@@ -87,7 +101,8 @@ func parseFlags() (*Configuration, error) {
 
 func parseEnvironment() (*Configuration, error) {
 	configuration := &Configuration{
-		FileStore: &FileStoreConfiguration{},
+		FileStore:     &FileStoreConfiguration{},
+		DatabaseStore: &DatabaseStoreConfiguration{},
 	}
 	err := env.Parse(configuration)
 

@@ -10,7 +10,7 @@ import (
 	"github.com/go-http-utils/headers"
 )
 
-func Log(handlerFunc http.HandlerFunc) http.HandlerFunc {
+func Log(handlerFunc http.HandlerFunc, logger logger.Logger) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		startTime := time.Now()
 		responseWriter := NewResponseWriter(writer)
@@ -38,8 +38,6 @@ func Log(handlerFunc http.HandlerFunc) http.HandlerFunc {
 			fmt.Fprintf(sb, ", response encoding: %v", responseEncoding)
 		}
 
-		ctx := request.Context()
-		log := logger.LoggerFromContext(ctx)
-		log.Infof(sb.String())
+		logger.Infof(sb.String())
 	}
 }
