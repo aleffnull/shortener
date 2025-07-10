@@ -5,5 +5,6 @@ type ShortenRequest struct {
 }
 
 type ShortenResponse struct {
-	Result string `json:"result"`
+	Result      string `json:"result"`
+	IsDuplicate bool   `json:"-"`
 }

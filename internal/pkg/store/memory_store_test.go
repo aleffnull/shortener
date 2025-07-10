@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/aleffnull/shortener/internal/config"
@@ -161,8 +162,8 @@ func TestMemoryStore_Save_KeyLengthIsDoubled(t *testing.T) {
 	// Act.
 	var key string
 	var err error
-	for range 100 {
-		key, err = store.Save(ctx, "foo")
+	for i := range 100 {
+		key, err = store.Save(ctx, fmt.Sprintf("foo%v", i))
 		require.NoError(t, err)
 		if len(key) > 1 {
 			break

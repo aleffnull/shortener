@@ -2,10 +2,12 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
 	"github.com/aleffnull/shortener/internal/config"
+	pkg_errors "github.com/aleffnull/shortener/internal/pkg/errors"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	pkg_models "github.com/aleffnull/shortener/internal/pkg/models"
 	"github.com/aleffnull/shortener/internal/pkg/store"
@@ -49,8 +51,17 @@ func (s *ShortenerApp) GetURL(ctx context.Context, key string) (string, bool, er
 func (s *ShortenerApp) ShortenURL(ctx context.Context, request *models.ShortenRequest) (*models.ShortenResponse, error) {
 	longURL := request.URL
 	key, err := s.storage.Save(ctx, longURL)
+
+	isDuplicate := false
 	if err != nil {
-		return nil, fmt.Errorf("ShortenURL, storage.Save failed: %w", err)
+		var duplicateURLError *pkg_errors.DuplicateURLError
+		if errors.As(err, &duplicateURLError) {
+			s.logger.Infof("Duplicate error: %v", duplicateURLError)
+			key = duplicateURLError.Key
+			isDuplicate = true
+		} else {
+			return nil, fmt.Errorf("ShortenURL, storage.Save failed: %w", err)
+		}
 	}
 
 	shortURL, err := url.JoinPath(s.configuration.BaseURL, key)
@@ -59,7 +70,8 @@ func (s *ShortenerApp) ShortenURL(ctx context.Context, request *models.ShortenRe
 	}
 
 	return &models.ShortenResponse{
-		Result: shortURL,
+		Result:      shortURL,
+		IsDuplicate: isDuplicate,
 	}, nil
 }
 

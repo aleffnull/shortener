@@ -10,6 +10,7 @@ import (
 	"github.com/go-http-utils/headers"
 	"github.com/go-playground/validator/v10"
 	"github.com/ldez/mimetype"
+	"github.com/samber/lo"
 )
 
 type Handler struct {
@@ -60,7 +61,7 @@ func (h *Handler) HandlePostRequest(response http.ResponseWriter, request *http.
 	}
 
 	response.Header().Set(headers.ContentType, mimetype.TextPlain)
-	response.WriteHeader(http.StatusCreated)
+	response.WriteHeader(lo.Ternary(shortenerResponse.IsDuplicate, http.StatusConflict, http.StatusCreated))
 	fmt.Fprint(response, shortenerResponse.Result)
 }
 
@@ -84,7 +85,7 @@ func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.R
 	}
 
 	response.Header().Set(headers.ContentType, mimetype.ApplicationJSON)
-	response.WriteHeader(http.StatusCreated)
+	response.WriteHeader(lo.Ternary(shortenerResponse.IsDuplicate, http.StatusConflict, http.StatusCreated))
 
 	if err = json.NewEncoder(response).Encode(shortenerResponse); err != nil {
 		http.Error(response, err.Error(), http.StatusInternalServerError)

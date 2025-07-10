@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/pkg/errors"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/models"
 )
@@ -15,7 +16,8 @@ type MemoryStore struct {
 	coldStore     ColdStore
 	configuration *config.MemoryStoreConfiguration
 	logger        logger.Logger
-	storeMap      map[string]string
+	keyToValueMap map[string]string
+	valueToKeyMap map[string]string
 	mutex         sync.RWMutex
 }
 
@@ -29,7 +31,8 @@ func NewMemoryStore(coldStore ColdStore, configuration *config.Configuration, lo
 		coldStore:     coldStore,
 		configuration: configuration.MemoryStore,
 		logger:        logger,
-		storeMap:      make(map[string]string),
+		keyToValueMap: make(map[string]string),
+		valueToKeyMap: make(map[string]string),
 	}
 
 	return store
@@ -43,7 +46,8 @@ func (s *MemoryStore) Init() error {
 
 	// Called only during startup, so no need for mutex locking.
 	for _, entry := range entries {
-		s.storeMap[entry.Key] = entry.Value
+		s.keyToValueMap[entry.Key] = entry.Value
+		s.valueToKeyMap[entry.Value] = entry.Key
 	}
 
 	s.logger.Infof("Loaded %v entries from cold storage", len(entries))
@@ -63,7 +67,7 @@ func (s *MemoryStore) Load(_ context.Context, key string) (string, bool, error) 
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	value, ok := s.storeMap[key]
+	value, ok := s.keyToValueMap[key]
 	return value, ok, nil
 }
 
@@ -115,11 +119,15 @@ func (s *MemoryStore) saveValue(ctx context.Context, value string) (string, erro
 }
 
 func (s *MemoryStore) saver(_ context.Context, key, value string) (bool, error) {
-	_, exists := s.storeMap[key]
-	if exists {
+	if _, exists := s.keyToValueMap[key]; exists {
 		return true, nil
 	}
 
-	s.storeMap[key] = value
+	if existingKey, ok := s.valueToKeyMap[value]; ok {
+		return false, errors.NewDuplicateURLError(existingKey, value)
+	}
+
+	s.keyToValueMap[key] = value
+	s.valueToKeyMap[value] = key
 	return false, nil
 }

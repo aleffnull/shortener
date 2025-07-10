@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/aleffnull/shortener/internal/config"
+	pkg_errors "github.com/aleffnull/shortener/internal/pkg/errors"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/models"
 	"github.com/golang-migrate/migrate/v4"
@@ -15,6 +16,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/samber/lo"
 )
 
 type DatabaseStore struct {
@@ -92,7 +94,7 @@ func (s *DatabaseStore) CheckAvailability(ctx context.Context) error {
 func (s *DatabaseStore) Load(ctx context.Context, key string) (string, bool, error) {
 	row := s.db.QueryRowContext(
 		ctx,
-		"select origin_url from urls where url_key = $1",
+		"select original_url from urls where url_key = $1",
 		key,
 	)
 
@@ -109,14 +111,22 @@ func (s *DatabaseStore) Load(ctx context.Context, key string) (string, bool, err
 }
 
 func (s *DatabaseStore) Save(ctx context.Context, value string) (string, error) {
-	key, err := doInTx(ctx, s.db, func(ctx context.Context, tx *sql.Tx) (string, error) {
-		return s.saveWithUniqueKey(ctx, value, func(ctx context.Context, key, value string) (bool, error) {
-			return s.saver(ctx, tx, key, value)
-		})
+	key, err := s.saveWithUniqueKey(ctx, value, func(ctx context.Context, key, value string) (bool, error) {
+		return s.saver(ctx, s.db, nil, key, value)
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("Save, doInTx failed: %w", err)
+		var duplicateURLError *pkg_errors.DuplicateURLError
+		if errors.As(err, &duplicateURLError) {
+			existingKey, err := s.getExistingKeyByValue(ctx, value)
+			if err != nil {
+				return "", fmt.Errorf("Save, getExistingKeyByValue error: %w", err)
+			}
+			duplicateURLError.Key = existingKey
+			return "", duplicateURLError
+		} else {
+			return "", fmt.Errorf("Save, doInTx failed: %w", err)
+		}
 	}
 
 	return key, nil
@@ -127,7 +137,7 @@ func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*models.Ba
 		responseItems := make([]*models.BatchResponseItem, 0, len(requestItems))
 		for _, requestItem := range requestItems {
 			key, err := s.saveWithUniqueKey(ctx, requestItem.OriginalURL, func(ctx context.Context, key, value string) (bool, error) {
-				return s.saver(ctx, tx, key, value)
+				return s.saver(ctx, nil, tx, key, value)
 			})
 			if err != nil {
 				return nil, fmt.Errorf("SaveBatch, saveWithUniqueKey failed: %w", err)
@@ -147,16 +157,19 @@ func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*models.Ba
 	return responseItems, nil
 }
 
-func (s *DatabaseStore) saver(ctx context.Context, tx *sql.Tx, key, value string) (bool, error) {
-	result, err := tx.ExecContext(
+func (s *DatabaseStore) saver(ctx context.Context, db *sql.DB, tx *sql.Tx, key, value string) (bool, error) {
+	executor := lo.Ternary(tx == nil, db.ExecContext, tx.ExecContext)
+	result, err := executor(
 		ctx,
-		"insert into urls (url_key, origin_url) values ($1, $2)",
+		"insert into urls (url_key, original_url) values ($1, $2)",
 		key, value,
 	)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-			// Unique key violation
+			if pgErr.ConstraintName == "urls_original_url_unique" {
+				return false, pkg_errors.NewDuplicateURLError("", value)
+			}
 			return true, nil
 		}
 
@@ -172,6 +185,25 @@ func (s *DatabaseStore) saver(ctx context.Context, tx *sql.Tx, key, value string
 	}
 
 	return false, nil
+}
+
+func (s *DatabaseStore) getExistingKeyByValue(ctx context.Context, value string) (string, error) {
+	row := s.db.QueryRowContext(
+		ctx,
+		"select url_key from urls where original_url = $1",
+		value,
+	)
+
+	var key string
+	if err := row.Scan(&key); err != nil {
+		if err == sql.ErrNoRows {
+			return "", fmt.Errorf("getExistingKeyByValue, row.Scan: failed to find existing key %v", key)
+		}
+
+		return "", fmt.Errorf("getExistingKeyByValue, row.Scan failed: %w", err)
+	}
+
+	return key, nil
 }
 
 func doInTx[T any](ctx context.Context, db *sql.DB, worker func(context.Context, *sql.Tx) (T, error)) (T, error) {
