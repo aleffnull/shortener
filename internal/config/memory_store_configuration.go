@@ -3,9 +3,7 @@ package config
 import "fmt"
 
 type MemoryStoreConfiguration struct {
-	KeyLength        int `validate:"required,ltefield=KeyMaxLength"`
-	KeyMaxLength     int `validate:"required"`
-	KeyMaxIterations int `validate:"required"`
+	KeyStoreConfiguration
 }
 
 func (c *MemoryStoreConfiguration) String() string {
@@ -18,8 +16,10 @@ func (c *MemoryStoreConfiguration) String() string {
 
 func defaultMemoryStoreConfiguration() *MemoryStoreConfiguration {
 	return &MemoryStoreConfiguration{
-		KeyLength:        8,
-		KeyMaxLength:     100,
-		KeyMaxIterations: 10,
+		KeyStoreConfiguration: KeyStoreConfiguration{
+			KeyLength:        8,
+			KeyMaxLength:     100,
+			KeyMaxIterations: 10,
+		},
 	}
 }
