@@ -18,7 +18,7 @@ type MemoryStore struct {
 	logger        logger.Logger
 	keyToValueMap map[string]string
 	valueToKeyMap map[string]string
-	mutex         sync.RWMutex
+	mutex         *sync.RWMutex
 }
 
 var _ Store = (*MemoryStore)(nil)
@@ -33,6 +33,7 @@ func NewMemoryStore(coldStore ColdStore, configuration *config.Configuration, lo
 		logger:        logger,
 		keyToValueMap: make(map[string]string),
 		valueToKeyMap: make(map[string]string),
+		mutex:         &sync.RWMutex{},
 	}
 
 	return store

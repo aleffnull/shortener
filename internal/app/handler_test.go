@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aleffnull/shortener/internal/pkg/mocks"
+	"github.com/aleffnull/shortener/internal/pkg/testutils"
 	"github.com/aleffnull/shortener/models"
 	"github.com/go-http-utils/headers"
 	"github.com/stretchr/testify/assert"
@@ -29,7 +29,7 @@ func TestHandler_HandleGetRequest(t *testing.T) {
 		name       string
 		key        string
 		want       want
-		hookBefore func(key string, app *mocks.MockApp)
+		hookBefore func(key string, mock *testutils.Mock)
 	}{
 		{
 			name: "unknown key",
@@ -38,8 +38,9 @@ func TestHandler_HandleGetRequest(t *testing.T) {
 				statusCode: http.StatusBadRequest,
 				emptyBody:  false,
 			},
-			hookBefore: func(key string, app *mocks.MockApp) {
-				app.EXPECT().GetURL(gomock.Any(), key).Return("", false, nil)
+			hookBefore: func(key string, mock *testutils.Mock) {
+				mock.App.EXPECT().GetURL(gomock.Any(), key).Return("", false, nil)
+				mock.Logger.EXPECT().Errorf(gomock.Any(), gomock.Any())
 			},
 		},
 		{
@@ -52,8 +53,8 @@ func TestHandler_HandleGetRequest(t *testing.T) {
 				},
 				emptyBody: true,
 			},
-			hookBefore: func(key string, app *mocks.MockApp) {
-				app.EXPECT().GetURL(gomock.Any(), key).Return("http://bar.buz", true, nil)
+			hookBefore: func(key string, mock *testutils.Mock) {
+				mock.App.EXPECT().GetURL(gomock.Any(), key).Return("http://bar.buz", true, nil)
 			},
 		},
 	}
@@ -64,9 +65,9 @@ func TestHandler_HandleGetRequest(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(http.MethodGet, "/foo", nil)
 			ctrl := gomock.NewController(t)
-			shortener := mocks.NewMockApp(ctrl)
-			handler := NewHandler(shortener)
-			tt.hookBefore(tt.key, shortener)
+			mock := testutils.NewMock(ctrl)
+			handler := NewHandler(mock.App, mock.Logger)
+			tt.hookBefore(tt.key, mock)
 
 			// Act.
 			handler.HandleGetRequest(recorder, request, tt.key)
@@ -103,12 +104,15 @@ func TestHandler_HandlePostRequest(t *testing.T) {
 		name       string
 		longURL    string
 		want       want
-		hookBefore func(longURL string, app *mocks.MockApp)
+		hookBefore func(longURL string, mock *testutils.Mock)
 	}{
 		{
 			name: "no body",
 			want: want{
 				statusCode: http.StatusBadRequest,
+			},
+			hookBefore: func(longURL string, mock *testutils.Mock) {
+				mock.Logger.EXPECT().Errorf(gomock.Any(), gomock.Any())
 			},
 		},
 		{
@@ -117,11 +121,12 @@ func TestHandler_HandlePostRequest(t *testing.T) {
 			want: want{
 				statusCode: http.StatusInternalServerError,
 			},
-			hookBefore: func(longURL string, app *mocks.MockApp) {
+			hookBefore: func(longURL string, mock *testutils.Mock) {
 				shortenRequest := &models.ShortenRequest{
 					URL: longURL,
 				}
-				app.EXPECT().ShortenURL(gomock.Any(), shortenRequest).Return(nil, assert.AnError)
+				mock.App.EXPECT().ShortenURL(gomock.Any(), shortenRequest).Return(nil, assert.AnError)
+				mock.Logger.EXPECT().Errorf(gomock.Any(), gomock.Any())
 			},
 		},
 		{
@@ -131,11 +136,11 @@ func TestHandler_HandlePostRequest(t *testing.T) {
 				statusCode:  http.StatusCreated,
 				validateURL: true,
 			},
-			hookBefore: func(longURL string, app *mocks.MockApp) {
+			hookBefore: func(longURL string, mock *testutils.Mock) {
 				shortenRequest := &models.ShortenRequest{
 					URL: longURL,
 				}
-				app.EXPECT().ShortenURL(gomock.Any(), shortenRequest).Return(&models.ShortenResponse{
+				mock.App.EXPECT().ShortenURL(gomock.Any(), shortenRequest).Return(&models.ShortenResponse{
 					Result: "http://localhost/abc",
 				}, nil)
 			},
@@ -148,10 +153,10 @@ func TestHandler_HandlePostRequest(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.longURL))
 			ctrl := gomock.NewController(t)
-			shortener := mocks.NewMockApp(ctrl)
-			handler := NewHandler(shortener)
+			mock := testutils.NewMock(ctrl)
+			handler := NewHandler(mock.App, mock.Logger)
 			if tt.hookBefore != nil {
-				tt.hookBefore(tt.longURL, shortener)
+				tt.hookBefore(tt.longURL, mock)
 			}
 
 			// Act.
@@ -184,7 +189,7 @@ func TestHandler_HandleAPIRequest(t *testing.T) {
 		name           string
 		shortenRequest *models.ShortenRequest
 		want           want
-		hookBefore     func(shortenRequest *models.ShortenRequest, app *mocks.MockApp)
+		hookBefore     func(shortenRequest *models.ShortenRequest, mock *testutils.Mock)
 	}{
 		{
 			name:           "no body",
@@ -192,12 +197,18 @@ func TestHandler_HandleAPIRequest(t *testing.T) {
 			want: want{
 				statusCode: http.StatusBadRequest,
 			},
+			hookBefore: func(shortenRequest *models.ShortenRequest, mock *testutils.Mock) {
+				mock.Logger.EXPECT().Errorf(gomock.Any(), gomock.Any())
+			},
 		},
 		{
 			name:           "invalid request",
 			shortenRequest: &models.ShortenRequest{},
 			want: want{
 				statusCode: http.StatusBadRequest,
+			},
+			hookBefore: func(shortenRequest *models.ShortenRequest, mock *testutils.Mock) {
+				mock.Logger.EXPECT().Errorf(gomock.Any(), gomock.Any())
 			},
 		},
 		{
@@ -208,8 +219,9 @@ func TestHandler_HandleAPIRequest(t *testing.T) {
 			want: want{
 				statusCode: http.StatusInternalServerError,
 			},
-			hookBefore: func(shortenRequest *models.ShortenRequest, app *mocks.MockApp) {
-				app.EXPECT().ShortenURL(gomock.Any(), shortenRequest).Return(nil, assert.AnError)
+			hookBefore: func(shortenRequest *models.ShortenRequest, mock *testutils.Mock) {
+				mock.App.EXPECT().ShortenURL(gomock.Any(), shortenRequest).Return(nil, assert.AnError)
+				mock.Logger.EXPECT().Errorf(gomock.Any(), gomock.Any())
 			},
 		},
 		{
@@ -221,8 +233,8 @@ func TestHandler_HandleAPIRequest(t *testing.T) {
 				statusCode:  http.StatusCreated,
 				validateURL: true,
 			},
-			hookBefore: func(shortenRequest *models.ShortenRequest, app *mocks.MockApp) {
-				app.EXPECT().ShortenURL(gomock.Any(), shortenRequest).Return(&models.ShortenResponse{
+			hookBefore: func(shortenRequest *models.ShortenRequest, mock *testutils.Mock) {
+				mock.App.EXPECT().ShortenURL(gomock.Any(), shortenRequest).Return(&models.ShortenResponse{
 					Result: "http://localhost/abc",
 				}, nil)
 			},
@@ -242,10 +254,10 @@ func TestHandler_HandleAPIRequest(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten", body)
 			ctrl := gomock.NewController(t)
-			shortener := mocks.NewMockApp(ctrl)
-			handler := NewHandler(shortener)
+			mock := testutils.NewMock(ctrl)
+			handler := NewHandler(mock.App, mock.Logger)
 			if tt.hookBefore != nil {
-				tt.hookBefore(tt.shortenRequest, shortener)
+				tt.hookBefore(tt.shortenRequest, mock)
 			}
 
 			// Act.
@@ -272,20 +284,21 @@ func TestHandler_HandlePingRequest(t *testing.T) {
 	tests := []struct {
 		name       string
 		statusCode int
-		hookBefore func(app *mocks.MockApp)
+		hookBefore func(mock *testutils.Mock)
 	}{
 		{
 			name:       "database error",
 			statusCode: http.StatusInternalServerError,
-			hookBefore: func(app *mocks.MockApp) {
-				app.EXPECT().CheckStore(gomock.Any()).Return(assert.AnError)
+			hookBefore: func(mock *testutils.Mock) {
+				mock.App.EXPECT().CheckStore(gomock.Any()).Return(assert.AnError)
+				mock.Logger.EXPECT().Errorf(gomock.Any(), gomock.Any())
 			},
 		},
 		{
 			name:       "ok",
 			statusCode: http.StatusOK,
-			hookBefore: func(app *mocks.MockApp) {
-				app.EXPECT().CheckStore(gomock.Any()).Return(nil)
+			hookBefore: func(mock *testutils.Mock) {
+				mock.App.EXPECT().CheckStore(gomock.Any()).Return(nil)
 			},
 		},
 	}
@@ -295,9 +308,9 @@ func TestHandler_HandlePingRequest(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(http.MethodGet, "/ping", nil)
 			ctrl := gomock.NewController(t)
-			shortener := mocks.NewMockApp(ctrl)
-			handler := NewHandler(shortener)
-			tt.hookBefore(shortener)
+			mock := testutils.NewMock(ctrl)
+			handler := NewHandler(mock.App, mock.Logger)
+			tt.hookBefore(mock)
 
 			// Act.
 			handler.HandlePingRequest(recorder, request)

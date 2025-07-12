@@ -39,6 +39,23 @@ func (m *MockLogger) EXPECT() *MockLoggerMockRecorder {
 	return m.recorder
 }
 
+// Errorf mocks base method.
+func (m *MockLogger) Errorf(template string, args ...any) {
+	m.ctrl.T.Helper()
+	varargs := []any{template}
+	for _, a := range args {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "Errorf", varargs...)
+}
+
+// Errorf indicates an expected call of Errorf.
+func (mr *MockLoggerMockRecorder) Errorf(template any, args ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{template}, args...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Errorf", reflect.TypeOf((*MockLogger)(nil).Errorf), varargs...)
+}
+
 // Fatalf mocks base method.
 func (m *MockLogger) Fatalf(template string, args ...any) {
 	m.ctrl.T.Helper()

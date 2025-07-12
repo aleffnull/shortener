@@ -16,7 +16,6 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/samber/lo"
 )
 
 type DatabaseStore struct {
@@ -25,6 +24,8 @@ type DatabaseStore struct {
 	logger        logger.Logger
 	db            *sql.DB
 }
+
+type executorFunc = func(ctx context.Context, query string, args ...any) (sql.Result, error)
 
 var _ Store = (*DatabaseStore)(nil)
 
@@ -112,7 +113,7 @@ func (s *DatabaseStore) Load(ctx context.Context, key string) (string, bool, err
 
 func (s *DatabaseStore) Save(ctx context.Context, value string) (string, error) {
 	key, err := s.saveWithUniqueKey(ctx, value, func(ctx context.Context, key, value string) (bool, error) {
-		return s.saver(ctx, s.db, nil, key, value)
+		return s.saver(ctx, s.db.ExecContext, key, value)
 	})
 
 	if err != nil {
@@ -133,32 +134,34 @@ func (s *DatabaseStore) Save(ctx context.Context, value string) (string, error) 
 }
 
 func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*models.BatchRequestItem) ([]*models.BatchResponseItem, error) {
-	responseItems, err := doInTx(ctx, s.db, func(ctx context.Context, tx *sql.Tx) ([]*models.BatchResponseItem, error) {
-		responseItems := make([]*models.BatchResponseItem, 0, len(requestItems))
-		for _, requestItem := range requestItems {
-			key, err := s.saveWithUniqueKey(ctx, requestItem.OriginalURL, func(ctx context.Context, key, value string) (bool, error) {
-				return s.saver(ctx, nil, tx, key, value)
-			})
-			if err != nil {
-				return nil, fmt.Errorf("SaveBatch, saveWithUniqueKey failed: %w", err)
-			}
-			responseItems = append(responseItems, &models.BatchResponseItem{
-				CorelationID: requestItem.CorelationID,
-				Key:          key,
-			})
-		}
-		return responseItems, nil
-	})
-
+	tx, err := s.db.Begin()
 	if err != nil {
-		return nil, fmt.Errorf("SaveBatch, doInTx failed: %w", err)
+		return nil, fmt.Errorf("SaveBatch, db.Begin failed: %w", err)
+	}
+
+	responseItems := make([]*models.BatchResponseItem, 0, len(requestItems))
+	for _, requestItem := range requestItems {
+		key, err := s.saveWithUniqueKey(ctx, requestItem.OriginalURL, func(ctx context.Context, key, value string) (bool, error) {
+			return s.saver(ctx, tx.ExecContext, key, value)
+		})
+		if err != nil {
+			return nil, rollbackTx(tx, fmt.Errorf("SaveBatch, saveWithUniqueKey failed: %w", err))
+		}
+
+		responseItems = append(responseItems, &models.BatchResponseItem{
+			CorelationID: requestItem.CorelationID,
+			Key:          key,
+		})
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("SaveBatch, tx.Commit failed: %w", err)
 	}
 
 	return responseItems, nil
 }
 
-func (s *DatabaseStore) saver(ctx context.Context, db *sql.DB, tx *sql.Tx, key, value string) (bool, error) {
-	executor := lo.Ternary(tx == nil, db.ExecContext, tx.ExecContext)
+func (s *DatabaseStore) saver(ctx context.Context, executor executorFunc, key, value string) (bool, error) {
 	result, err := executor(
 		ctx,
 		"insert into urls (url_key, original_url) values ($1, $2)",
@@ -206,25 +209,10 @@ func (s *DatabaseStore) getExistingKeyByValue(ctx context.Context, value string)
 	return key, nil
 }
 
-func doInTx[T any](ctx context.Context, db *sql.DB, worker func(context.Context, *sql.Tx) (T, error)) (T, error) {
-	var emptyResult T
-
-	tx, err := db.Begin()
-	if err != nil {
-		return emptyResult, fmt.Errorf("doInTx, db.Begin failed: %w", err)
+func rollbackTx(tx *sql.Tx, originalError error) error {
+	if txErr := tx.Rollback(); txErr != nil {
+		return errors.Join(originalError, fmt.Errorf("rollbackTx, tx.Rollback failed: %w", txErr))
 	}
 
-	result, err := worker(ctx, tx)
-	if err != nil {
-		if txErr := tx.Rollback(); txErr != nil {
-			err = errors.Join(err, fmt.Errorf("doInTx, tx.Rollback failed: %w", txErr))
-		}
-		return emptyResult, fmt.Errorf("doInTx, saveWithUniqueKey failed: %w", err)
-	}
-
-	if err = tx.Commit(); err != nil {
-		return emptyResult, fmt.Errorf("doInTx, tx.Commit failed: %w", err)
-	}
-
-	return result, nil
+	return originalError
 }

@@ -1,6 +1,10 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/samber/lo"
+)
 
 type DatabaseStoreConfiguration struct {
 	KeyStoreConfiguration
@@ -8,12 +12,13 @@ type DatabaseStoreConfiguration struct {
 }
 
 func (c *DatabaseStoreConfiguration) String() string {
+	dataSourceName := lo.Ternary(len(c.DataSourceName) == 0, "", "*****")
 	return fmt.Sprintf(
 		"&DatabaseStoreConfiguration{KeyLength:%v KeyMaxLength:%v KeyMaxIterations:%v DataSourceName:'%v'}",
 		c.KeyLength,
 		c.KeyMaxLength,
 		c.KeyMaxIterations,
-		c.DataSourceName,
+		dataSourceName,
 	)
 }
 

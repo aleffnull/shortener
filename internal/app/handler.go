@@ -2,10 +2,12 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 
+	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/models"
 	"github.com/go-http-utils/headers"
 	"github.com/go-playground/validator/v10"
@@ -15,22 +17,24 @@ import (
 
 type Handler struct {
 	shortener App
+	logger    logger.Logger
 }
 
-func NewHandler(shortener App) *Handler {
+func NewHandler(shortener App, logger logger.Logger) *Handler {
 	return &Handler{
 		shortener: shortener,
+		logger:    logger,
 	}
 }
 
 func (h *Handler) HandleGetRequest(response http.ResponseWriter, request *http.Request, key string) {
 	value, ok, err := h.shortener.GetURL(request.Context(), key)
 	if err != nil {
-		http.Error(response, err.Error(), http.StatusInternalServerError)
+		h.handleServerError(response, err)
 		return
 	}
 	if !ok {
-		http.Error(response, "Key was not found", http.StatusBadRequest)
+		h.handleRequestError(response, errors.New("key was not found"))
 		return
 	}
 
@@ -41,13 +45,13 @@ func (h *Handler) HandleGetRequest(response http.ResponseWriter, request *http.R
 func (h *Handler) HandlePostRequest(response http.ResponseWriter, request *http.Request) {
 	body, err := io.ReadAll(request.Body)
 	if err != nil {
-		http.Error(response, err.Error(), http.StatusInternalServerError)
+		h.handleServerError(response, err)
 		return
 	}
 
 	longURL := string(body)
 	if len(body) == 0 {
-		http.Error(response, "Body is required", http.StatusBadRequest)
+		h.handleRequestError(response, errors.New("body is required"))
 		return
 	}
 
@@ -56,7 +60,7 @@ func (h *Handler) HandlePostRequest(response http.ResponseWriter, request *http.
 	}
 	shortenerResponse, err := h.shortener.ShortenURL(request.Context(), shortenRequest)
 	if err != nil {
-		http.Error(response, err.Error(), http.StatusInternalServerError)
+		h.handleServerError(response, err)
 		return
 	}
 
@@ -68,19 +72,19 @@ func (h *Handler) HandlePostRequest(response http.ResponseWriter, request *http.
 func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.Request) {
 	var shortenRequest models.ShortenRequest
 	if err := json.NewDecoder(request.Body).Decode(&shortenRequest); err != nil {
-		http.Error(response, err.Error(), http.StatusBadRequest)
+		h.handleRequestError(response, err)
 		return
 	}
 
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	if err := validate.Struct(shortenRequest); err != nil {
-		http.Error(response, err.Error(), http.StatusBadRequest)
+		h.handleRequestError(response, err)
 		return
 	}
 
 	shortenerResponse, err := h.shortener.ShortenURL(request.Context(), &shortenRequest)
 	if err != nil {
-		http.Error(response, err.Error(), http.StatusInternalServerError)
+		h.handleServerError(response, err)
 		return
 	}
 
@@ -88,7 +92,7 @@ func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.R
 	response.WriteHeader(lo.Ternary(shortenerResponse.IsDuplicate, http.StatusConflict, http.StatusCreated))
 
 	if err = json.NewEncoder(response).Encode(shortenerResponse); err != nil {
-		http.Error(response, err.Error(), http.StatusInternalServerError)
+		h.handleServerError(response, err)
 		return
 	}
 }
@@ -96,19 +100,19 @@ func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.R
 func (h *Handler) HandleAPIBatchRequest(response http.ResponseWriter, request *http.Request) {
 	var requestItems []*models.ShortenBatchRequestItem
 	if err := json.NewDecoder(request.Body).Decode(&requestItems); err != nil {
-		http.Error(response, err.Error(), http.StatusBadRequest)
+		h.handleRequestError(response, err)
 		return
 	}
 
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	if err := validate.Var(requestItems, "omitempty,dive"); err != nil {
-		http.Error(response, err.Error(), http.StatusBadRequest)
+		h.handleRequestError(response, err)
 		return
 	}
 
 	shortenerBatchResponse, err := h.shortener.ShortenURLBatch(request.Context(), requestItems)
 	if err != nil {
-		http.Error(response, err.Error(), http.StatusInternalServerError)
+		h.handleServerError(response, err)
 		return
 	}
 
@@ -116,7 +120,7 @@ func (h *Handler) HandleAPIBatchRequest(response http.ResponseWriter, request *h
 	response.WriteHeader(http.StatusCreated)
 
 	if err = json.NewEncoder(response).Encode(shortenerBatchResponse); err != nil {
-		http.Error(response, err.Error(), http.StatusInternalServerError)
+		h.handleServerError(response, err)
 		return
 	}
 }
@@ -124,9 +128,19 @@ func (h *Handler) HandleAPIBatchRequest(response http.ResponseWriter, request *h
 func (h *Handler) HandlePingRequest(response http.ResponseWriter, request *http.Request) {
 	err := h.shortener.CheckStore(request.Context())
 	if err != nil {
-		http.Error(response, err.Error(), http.StatusInternalServerError)
+		h.handleServerError(response, err)
 		return
 	}
 
 	response.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) handleServerError(response http.ResponseWriter, err error) {
+	h.logger.Errorf("Server error: %v", err)
+	http.Error(response, "Internal server error", http.StatusInternalServerError)
+}
+
+func (h *Handler) handleRequestError(response http.ResponseWriter, err error) {
+	h.logger.Errorf("Request error: %v", err)
+	http.Error(response, err.Error(), http.StatusBadRequest)
 }
