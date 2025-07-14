@@ -1,50 +1,69 @@
 package app
 
 import (
-	"net"
 	"net/http"
 
-	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/middleware"
 	"github.com/go-chi/chi/v5"
 	cm "github.com/go-chi/chi/v5/middleware"
 	"github.com/ldez/mimetype"
-	"golang.org/x/net/context"
 )
 
 const mimetypeApplicationGZIP = "application/x-gzip"
 
 type Router struct {
-	mux *chi.Mux
+	handler *Handler
+	logger  logger.Logger
 }
 
-func NewRouter() *Router {
+func NewRouter(handler *Handler, logger logger.Logger) *Router {
 	return &Router{
-		mux: chi.NewRouter(),
+		handler: handler,
+		logger:  logger,
 	}
 }
 
-func (r *Router) Prepare(handler *Handler) {
-	r.mux.Get("/{key}",
+func (r *Router) NewMuxHandler() http.Handler {
+	mux := chi.NewRouter()
+
+	mux.Get("/ping",
+		middleware.Log(
+			r.handler.HandlePingRequest,
+			r.logger))
+
+	mux.Get("/{key}",
 		middleware.Log(
 			setContentType(
 				func(writer http.ResponseWriter, request *http.Request) {
 					key := chi.URLParam(request, "key")
-					handler.HandleGetRequest(writer, key)
+					r.handler.HandleGetRequest(writer, request, key)
 				},
-				mimetype.TextPlain)))
+				mimetype.TextPlain),
+			r.logger))
 
-	r.mux.Post("/",
+	mux.Post("/",
 		middleware.Log(
 			setContentType(
-				middleware.GzipHandler(handler.HandlePostRequest),
-				mimetype.TextPlain, mimetypeApplicationGZIP)))
+				middleware.GzipHandler(r.handler.HandlePostRequest),
+				mimetype.TextPlain, mimetypeApplicationGZIP),
+			r.logger))
 
-	r.mux.Post("/api/shorten",
+	mux.Post("/api/shorten",
 		middleware.Log(
 			setContentType(
-				middleware.GzipHandler(handler.HandleAPIRequest),
-				mimetype.ApplicationJSON, mimetypeApplicationGZIP)))
+				middleware.GzipHandler(r.handler.HandleAPIRequest),
+				mimetype.ApplicationJSON, mimetypeApplicationGZIP),
+			r.logger))
+
+	mux.Post("/api/shorten/batch",
+		middleware.Log(
+			setContentType(
+				middleware.GzipHandler(r.handler.HandleAPIBatchRequest),
+				mimetype.ApplicationJSON, mimetypeApplicationGZIP),
+			r.logger))
+
+	return mux
 }
 
 func setContentType(next http.HandlerFunc, contentType ...string) http.HandlerFunc {
@@ -53,16 +72,4 @@ func setContentType(next http.HandlerFunc, contentType ...string) http.HandlerFu
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		restricted.ServeHTTP(w, r)
 	})
-}
-
-func (r *Router) Run(ctx context.Context, configuration *config.Configuration) error {
-	server := &http.Server{
-		Addr:    configuration.ServerAddress,
-		Handler: r.mux,
-		BaseContext: func(_ net.Listener) context.Context {
-			return ctx
-		},
-	}
-
-	return server.ListenAndServe()
 }
