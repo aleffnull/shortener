@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 
 	"github.com/aleffnull/shortener/internal/app"
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/pkg/database"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/store"
 	"go.uber.org/fx"
@@ -18,14 +18,15 @@ import (
 
 func NewShortenerApp(
 	lc fx.Lifecycle,
+	connection database.Connection,
 	storage store.Store,
 	log logger.Logger,
 	configuration *config.Configuration,
 ) app.App {
-	shortener := app.NewShortenerApp(storage, log, configuration)
+	shortener := app.NewShortenerApp(connection, storage, log, configuration)
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			err := shortener.Init()
+			err := shortener.Init(ctx)
 			if err != nil {
 				return fmt.Errorf("application initialization failed: %w", err)
 			}
@@ -71,27 +72,14 @@ func NewHTTPServer(
 }
 
 func main() {
-	configuration, err := config.GetConfiguration()
-	if err != nil {
-		log.Fatalf("Failed to get application configuration: %s", err)
-	}
-
-	configurationProvider := func() *config.Configuration { return configuration }
-	storeProvider := func(coldStore store.ColdStore, logger logger.Logger) store.Store {
-		if configuration.DatabaseStore.IsDatabaseEnabled() {
-			return store.NewDatabaseStore(configuration, logger)
-		}
-
-		return store.NewMemoryStore(coldStore, configuration, logger)
-	}
-
 	fx.New(
 		fx.Provide(
 			zap.NewDevelopment,
 			logger.NewZapLogger,
-			configurationProvider,
-			storeProvider,
+			config.GetConfiguration,
+			database.NewConnection,
 			store.NewFileStore,
+			store.NewStore,
 			NewShortenerApp,
 			app.NewHandler,
 			app.NewRouter,

@@ -3,6 +3,9 @@ package store
 import (
 	"context"
 
+	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/pkg/database"
+	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/models"
 )
 
@@ -19,4 +22,17 @@ type Store interface {
 type ColdStore interface {
 	LoadAll() ([]*models.ColdStoreEntry, error)
 	Save(*models.ColdStoreEntry) error
+}
+
+func NewStore(
+	connection database.Connection,
+	coldStore ColdStore,
+	configuration *config.Configuration,
+	logger logger.Logger,
+) Store {
+	if configuration.DatabaseStore.IsDatabaseEnabled() {
+		return NewDatabaseStore(connection, configuration, logger)
+	}
+
+	return NewMemoryStore(coldStore, configuration, logger)
 }

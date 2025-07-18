@@ -72,17 +72,17 @@ func (mr *MockAppMockRecorder) GetURL(arg0, arg1 any) *gomock.Call {
 }
 
 // Init mocks base method.
-func (m *MockApp) Init() error {
+func (m *MockApp) Init(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init")
+	ret := m.ctrl.Call(m, "Init", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockAppMockRecorder) Init() *gomock.Call {
+func (mr *MockAppMockRecorder) Init(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockApp)(nil).Init))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockApp)(nil).Init), ctx)
 }
 
 // ShortenURL mocks base method.
