@@ -24,7 +24,7 @@ func TestShortenerApp_GetURL(t *testing.T) {
 	mock := testutils.NewMock(ctrl)
 	mock.Store.EXPECT().Load(gomock.Any(), key).Return(shortURL, true, nil)
 	configuration := &config.Configuration{}
-	shortener := NewShortenerApp(mock.Store, mock.Logger, configuration)
+	shortener := NewShortenerApp(mock.Connection, mock.Store, mock.Logger, configuration)
 
 	// Act.
 	url, ok, err := shortener.GetURL(ctx, key)
@@ -91,7 +91,7 @@ func TestShortenerApp_ShortenURL(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			mock := testutils.NewMock(ctrl)
 			tt.hookBefore(tt.request, mock)
-			shortener := NewShortenerApp(mock.Store, mock.Logger, tt.configuration)
+			shortener := NewShortenerApp(mock.Connection, mock.Store, mock.Logger, tt.configuration)
 
 			response, err := shortener.ShortenURL(ctx, tt.request)
 			require.Equal(t, tt.response, response)

@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/pkg/database"
 	pkg_errors "github.com/aleffnull/shortener/internal/pkg/errors"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	pkg_models "github.com/aleffnull/shortener/internal/pkg/models"
@@ -16,6 +17,7 @@ import (
 )
 
 type ShortenerApp struct {
+	connection    database.Connection
 	storage       store.Store
 	logger        logger.Logger
 	configuration *config.Configuration
@@ -23,18 +25,27 @@ type ShortenerApp struct {
 
 var _ App = (*ShortenerApp)(nil)
 
-func NewShortenerApp(storage store.Store, logger logger.Logger, configuration *config.Configuration) App {
+func NewShortenerApp(
+	connection database.Connection,
+	storage store.Store,
+	logger logger.Logger,
+	configuration *config.Configuration,
+) App {
 	return &ShortenerApp{
+		connection:    connection,
 		storage:       storage,
 		logger:        logger,
 		configuration: configuration,
 	}
 }
 
-func (s *ShortenerApp) Init() error {
-	err := s.storage.Init()
-	if err != nil {
-		return fmt.Errorf("Init, initStorage failed: %w", err)
+func (s *ShortenerApp) Init(ctx context.Context) error {
+	if err := s.storage.Init(); err != nil {
+		return fmt.Errorf("ShortenerApp.Init, storage.Init failed: %w", err)
+	}
+
+	if err := s.connection.Init(ctx); err != nil {
+		return fmt.Errorf("ShortenerApp.Init, connection.Init failed: %w", err)
 	}
 
 	return nil
@@ -42,6 +53,7 @@ func (s *ShortenerApp) Init() error {
 
 func (s *ShortenerApp) Shutdown() {
 	s.storage.Shutdown()
+	s.connection.Shutdown()
 }
 
 func (s *ShortenerApp) GetURL(ctx context.Context, key string) (string, bool, error) {
