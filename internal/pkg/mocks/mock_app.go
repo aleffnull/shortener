@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	models "github.com/aleffnull/shortener/models"
+	uuid "github.com/google/uuid"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -71,6 +72,21 @@ func (mr *MockAppMockRecorder) GetURL(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetURL", reflect.TypeOf((*MockApp)(nil).GetURL), arg0, arg1)
 }
 
+// GetUserURLs mocks base method.
+func (m *MockApp) GetUserURLs(arg0 context.Context, arg1 uuid.UUID) ([]*models.UserURLsResponseItem, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserURLs", arg0, arg1)
+	ret0, _ := ret[0].([]*models.UserURLsResponseItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserURLs indicates an expected call of GetUserURLs.
+func (mr *MockAppMockRecorder) GetUserURLs(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserURLs", reflect.TypeOf((*MockApp)(nil).GetUserURLs), arg0, arg1)
+}
+
 // Init mocks base method.
 func (m *MockApp) Init(ctx context.Context) error {
 	m.ctrl.T.Helper()
@@ -86,33 +102,33 @@ func (mr *MockAppMockRecorder) Init(ctx any) *gomock.Call {
 }
 
 // ShortenURL mocks base method.
-func (m *MockApp) ShortenURL(arg0 context.Context, arg1 *models.ShortenRequest) (*models.ShortenResponse, error) {
+func (m *MockApp) ShortenURL(arg0 context.Context, arg1 *models.ShortenRequest, arg2 uuid.UUID) (*models.ShortenResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ShortenURL", arg0, arg1)
+	ret := m.ctrl.Call(m, "ShortenURL", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*models.ShortenResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ShortenURL indicates an expected call of ShortenURL.
-func (mr *MockAppMockRecorder) ShortenURL(arg0, arg1 any) *gomock.Call {
+func (mr *MockAppMockRecorder) ShortenURL(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShortenURL", reflect.TypeOf((*MockApp)(nil).ShortenURL), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShortenURL", reflect.TypeOf((*MockApp)(nil).ShortenURL), arg0, arg1, arg2)
 }
 
 // ShortenURLBatch mocks base method.
-func (m *MockApp) ShortenURLBatch(arg0 context.Context, arg1 []*models.ShortenBatchRequestItem) ([]*models.ShortenBatchResponseItem, error) {
+func (m *MockApp) ShortenURLBatch(arg0 context.Context, arg1 []*models.ShortenBatchRequestItem, arg2 uuid.UUID) ([]*models.ShortenBatchResponseItem, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ShortenURLBatch", arg0, arg1)
+	ret := m.ctrl.Call(m, "ShortenURLBatch", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]*models.ShortenBatchResponseItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ShortenURLBatch indicates an expected call of ShortenURLBatch.
-func (mr *MockAppMockRecorder) ShortenURLBatch(arg0, arg1 any) *gomock.Call {
+func (mr *MockAppMockRecorder) ShortenURLBatch(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShortenURLBatch", reflect.TypeOf((*MockApp)(nil).ShortenURLBatch), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShortenURLBatch", reflect.TypeOf((*MockApp)(nil).ShortenURLBatch), arg0, arg1, arg2)
 }
 
 // Shutdown mocks base method.

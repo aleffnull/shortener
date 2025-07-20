@@ -9,6 +9,7 @@ import (
 	"github.com/aleffnull/shortener/internal/pkg/errors"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/models"
+	"github.com/google/uuid"
 )
 
 type MemoryStore struct {
@@ -72,14 +73,18 @@ func (s *MemoryStore) Load(_ context.Context, key string) (string, bool, error) 
 	return value, ok, nil
 }
 
-func (s *MemoryStore) Save(ctx context.Context, value string) (string, error) {
+func (s *MemoryStore) LoadAllByUserID(context.Context, uuid.UUID) ([]*models.KeyOriginalURLItem, error) {
+	return nil, nil
+}
+
+func (s *MemoryStore) Save(ctx context.Context, value string, _ uuid.UUID) (string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	return s.saveValue(ctx, value)
 }
 
-func (s *MemoryStore) SaveBatch(ctx context.Context, requestItems []*models.BatchRequestItem) ([]*models.BatchResponseItem, error) {
+func (s *MemoryStore) SaveBatch(ctx context.Context, requestItems []*models.BatchRequestItem, _ uuid.UUID) ([]*models.BatchResponseItem, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/middleware"
+	"github.com/aleffnull/shortener/internal/pkg/parameters"
 	"github.com/go-chi/chi/v5"
 	cm "github.com/go-chi/chi/v5/middleware"
 	"github.com/ldez/mimetype"
@@ -13,14 +14,16 @@ import (
 const mimetypeApplicationGZIP = "application/x-gzip"
 
 type Router struct {
-	handler *Handler
-	logger  logger.Logger
+	handler    *Handler
+	parameters parameters.AppParameters
+	logger     logger.Logger
 }
 
-func NewRouter(handler *Handler, logger logger.Logger) *Router {
+func NewRouter(handler *Handler, parameters parameters.AppParameters, logger logger.Logger) *Router {
 	return &Router{
-		handler: handler,
-		logger:  logger,
+		handler:    handler,
+		parameters: parameters,
+		logger:     logger,
 	}
 }
 
@@ -28,39 +31,66 @@ func (r *Router) NewMuxHandler() http.Handler {
 	mux := chi.NewRouter()
 
 	mux.Get("/ping",
-		middleware.Log(
+		middleware.LogHandler(
 			r.handler.HandlePingRequest,
 			r.logger))
 
 	mux.Get("/{key}",
-		middleware.Log(
-			setContentType(
-				func(writer http.ResponseWriter, request *http.Request) {
-					key := chi.URLParam(request, "key")
-					r.handler.HandleGetRequest(writer, request, key)
-				},
-				mimetype.TextPlain),
+		middleware.LogHandler(
+			middleware.UserIDHandler(
+				setContentType(
+					func(writer http.ResponseWriter, request *http.Request) {
+						key := chi.URLParam(request, "key")
+						r.handler.HandleGetRequest(writer, request, key)
+					},
+					mimetype.TextPlain),
+				r.parameters,
+				r.logger,
+				middleware.UserIDOptionsRequireValidToken),
+			r.logger))
+
+	mux.Get("/api/user/urls",
+		middleware.LogHandler(
+			middleware.UserIDHandler(
+				setContentType(
+					middleware.GzipHandler(r.handler.HandleGetUserURLsRequest),
+					mimetype.ApplicationJSON, mimetypeApplicationGZIP),
+				r.parameters,
+				r.logger,
+				middleware.UserIDOptionsRequireValidToken),
 			r.logger))
 
 	mux.Post("/",
-		middleware.Log(
-			setContentType(
-				middleware.GzipHandler(r.handler.HandlePostRequest),
-				mimetype.TextPlain, mimetypeApplicationGZIP),
+		middleware.LogHandler(
+			middleware.UserIDHandler(
+				setContentType(
+					middleware.GzipHandler(r.handler.HandlePostRequest),
+					mimetype.TextPlain, mimetypeApplicationGZIP),
+				r.parameters,
+				r.logger,
+				middleware.UserIDOptionsNone),
 			r.logger))
 
 	mux.Post("/api/shorten",
-		middleware.Log(
-			setContentType(
-				middleware.GzipHandler(r.handler.HandleAPIRequest),
-				mimetype.ApplicationJSON, mimetypeApplicationGZIP),
+		middleware.LogHandler(
+			middleware.UserIDHandler(
+				setContentType(
+					middleware.GzipHandler(r.handler.HandleAPIRequest),
+					mimetype.ApplicationJSON, mimetypeApplicationGZIP),
+				r.parameters,
+				r.logger,
+				middleware.UserIDOptionsNone),
 			r.logger))
 
 	mux.Post("/api/shorten/batch",
-		middleware.Log(
-			setContentType(
-				middleware.GzipHandler(r.handler.HandleAPIBatchRequest),
-				mimetype.ApplicationJSON, mimetypeApplicationGZIP),
+		middleware.LogHandler(
+			middleware.UserIDHandler(
+				setContentType(
+					middleware.GzipHandler(r.handler.HandleAPIBatchRequest),
+					mimetype.ApplicationJSON, mimetypeApplicationGZIP),
+				r.parameters,
+				r.logger,
+				middleware.UserIDOptionsNone),
 			r.logger))
 
 	return mux

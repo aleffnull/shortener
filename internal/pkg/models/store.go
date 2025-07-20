@@ -14,3 +14,8 @@ type BatchResponseItem struct {
 	CorelationID string
 	Key          string
 }
+
+type KeyOriginalURLItem struct {
+	URLKey      string
+	OriginalURL string
+}

@@ -10,7 +10,7 @@ import (
 	"github.com/go-http-utils/headers"
 )
 
-func Log(handlerFunc http.HandlerFunc, logger logger.Logger) http.HandlerFunc {
+func LogHandler(handlerFunc http.HandlerFunc, logger logger.Logger) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		startTime := time.Now()
 		responseWriter := NewResponseWriter(writer)

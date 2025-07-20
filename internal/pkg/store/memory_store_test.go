@@ -8,6 +8,7 @@ import (
 	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/pkg/models"
 	"github.com/aleffnull/shortener/internal/pkg/testutils"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -55,7 +56,7 @@ func TestMemoryStore_SaveAndLoad(t *testing.T) {
 	store := NewMemoryStore(mock.ColdStore, configuration, mock.Logger)
 
 	// Act.
-	key, err := store.Save(ctx, "foo")
+	key, err := store.Save(ctx, "foo", uuid.New())
 	require.NoError(t, err)
 	value, ok, err := store.Load(ctx, key)
 	require.NoError(t, err)
@@ -120,7 +121,7 @@ func TestMemoryStore_Save_NotUniqueKey(t *testing.T) {
 	// Act.
 	var err error
 	for range 100 {
-		_, err = store.Save(ctx, "foo")
+		_, err = store.Save(ctx, "foo", uuid.New())
 		if err != nil {
 			break
 		}
@@ -151,7 +152,7 @@ func TestMemoryStore_Save_KeyLengthIsDoubled(t *testing.T) {
 	var key string
 	var err error
 	for i := range 100 {
-		key, err = store.Save(ctx, fmt.Sprintf("foo%v", i))
+		key, err = store.Save(ctx, fmt.Sprintf("foo%v", i), uuid.New())
 		require.NoError(t, err)
 		if len(key) > 1 {
 			break
