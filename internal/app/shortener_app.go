@@ -11,8 +11,10 @@ import (
 	pkg_errors "github.com/aleffnull/shortener/internal/pkg/errors"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	pkg_models "github.com/aleffnull/shortener/internal/pkg/models"
+	"github.com/aleffnull/shortener/internal/pkg/parameters"
 	"github.com/aleffnull/shortener/internal/pkg/store"
 	"github.com/aleffnull/shortener/models"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 )
 
@@ -20,6 +22,7 @@ type ShortenerApp struct {
 	connection    database.Connection
 	storage       store.Store
 	logger        logger.Logger
+	parameters    parameters.AppParameters
 	configuration *config.Configuration
 }
 
@@ -29,12 +32,14 @@ func NewShortenerApp(
 	connection database.Connection,
 	storage store.Store,
 	logger logger.Logger,
+	parameters parameters.AppParameters,
 	configuration *config.Configuration,
 ) App {
 	return &ShortenerApp{
 		connection:    connection,
 		storage:       storage,
 		logger:        logger,
+		parameters:    parameters,
 		configuration: configuration,
 	}
 }
@@ -46,6 +51,10 @@ func (s *ShortenerApp) Init(ctx context.Context) error {
 
 	if err := s.connection.Init(ctx); err != nil {
 		return fmt.Errorf("ShortenerApp.Init, connection.Init failed: %w", err)
+	}
+
+	if err := s.parameters.Init(ctx); err != nil {
+		return fmt.Errorf("ShortenerApp.Init, parameters.Init failed: %w", err)
 	}
 
 	return nil
@@ -60,9 +69,31 @@ func (s *ShortenerApp) GetURL(ctx context.Context, key string) (string, bool, er
 	return s.storage.Load(ctx, key)
 }
 
-func (s *ShortenerApp) ShortenURL(ctx context.Context, request *models.ShortenRequest) (*models.ShortenResponse, error) {
+func (s *ShortenerApp) GetUserURLs(ctx context.Context, userID uuid.UUID) ([]*models.UserURLsResponseItem, error) {
+	items, err := s.storage.LoadAllByUserID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("ShortenerApp.GetUserURLs, storage.LoadAllByUserID failed: %w", err)
+	}
+
+	responseItems := []*models.UserURLsResponseItem{}
+	for _, item := range items {
+		shortURL, err := url.JoinPath(s.configuration.BaseURL, item.URLKey)
+		if err != nil {
+			return nil, fmt.Errorf("ShortenerApp.GetUserURLs, url.JoinPath: %w", err)
+		}
+
+		responseItems = append(responseItems, &models.UserURLsResponseItem{
+			ShortURL:    shortURL,
+			OriginalURL: item.OriginalURL,
+		})
+	}
+
+	return responseItems, nil
+}
+
+func (s *ShortenerApp) ShortenURL(ctx context.Context, request *models.ShortenRequest, userID uuid.UUID) (*models.ShortenResponse, error) {
 	longURL := request.URL
-	key, err := s.storage.Save(ctx, longURL)
+	key, err := s.storage.Save(ctx, longURL, userID)
 
 	isDuplicate := false
 	if err != nil {
@@ -87,7 +118,7 @@ func (s *ShortenerApp) ShortenURL(ctx context.Context, request *models.ShortenRe
 	}, nil
 }
 
-func (s *ShortenerApp) ShortenURLBatch(ctx context.Context, requestItems []*models.ShortenBatchRequestItem) ([]*models.ShortenBatchResponseItem, error) {
+func (s *ShortenerApp) ShortenURLBatch(ctx context.Context, requestItems []*models.ShortenBatchRequestItem, userID uuid.UUID) ([]*models.ShortenBatchResponseItem, error) {
 	if len(requestItems) == 0 {
 		return []*models.ShortenBatchResponseItem{}, nil
 	}
@@ -98,7 +129,7 @@ func (s *ShortenerApp) ShortenURLBatch(ctx context.Context, requestItems []*mode
 			OriginalURL:  item.OriginalURL,
 		}
 	})
-	responseModels, err := s.storage.SaveBatch(ctx, requestModels)
+	responseModels, err := s.storage.SaveBatch(ctx, requestModels, userID)
 	if err != nil {
 		return nil, fmt.Errorf("ShortenURLBatch, storage.SaveBatch: %w", err)
 	}
