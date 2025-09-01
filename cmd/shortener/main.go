@@ -10,6 +10,7 @@ import (
 	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/pkg/database"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
+	"github.com/aleffnull/shortener/internal/pkg/parameters"
 	"github.com/aleffnull/shortener/internal/pkg/store"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
@@ -21,9 +22,10 @@ func NewShortenerApp(
 	connection database.Connection,
 	storage store.Store,
 	log logger.Logger,
+	parameters parameters.AppParameters,
 	configuration *config.Configuration,
 ) app.App {
-	shortener := app.NewShortenerApp(connection, storage, log, configuration)
+	shortener := app.NewShortenerApp(connection, storage, log, parameters, configuration)
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			err := shortener.Init(ctx)
@@ -80,6 +82,7 @@ func main() {
 			database.NewConnection,
 			store.NewFileStore,
 			store.NewStore,
+			parameters.NewAppParameters,
 			NewShortenerApp,
 			app.NewHandler,
 			app.NewRouter,
