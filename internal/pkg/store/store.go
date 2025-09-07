@@ -15,10 +15,11 @@ type Store interface {
 	Shutdown()
 	CheckAvailability(context.Context) error
 
-	Load(context.Context, string) (string, bool, error)
+	Load(context.Context, string) (*models.URLItem, error)
 	LoadAllByUserID(context.Context, uuid.UUID) ([]*models.KeyOriginalURLItem, error)
 	Save(context.Context, string, uuid.UUID) (string, error)
 	SaveBatch(context.Context, []*models.BatchRequestItem, uuid.UUID) ([]*models.BatchResponseItem, error)
+	DeleteBatch(context.Context, []string, uuid.UUID) error
 }
 
 type ColdStore interface {

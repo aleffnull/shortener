@@ -39,7 +39,7 @@ func TestHandler_HandleGetRequest(t *testing.T) {
 				emptyBody:  false,
 			},
 			hookBefore: func(key string, mock *testutils.Mock) {
-				mock.App.EXPECT().GetURL(gomock.Any(), key).Return("", false, nil)
+				mock.App.EXPECT().GetURL(gomock.Any(), key).Return(nil, nil)
 				mock.Logger.EXPECT().Errorf(gomock.Any(), gomock.Any())
 			},
 		},
@@ -54,7 +54,9 @@ func TestHandler_HandleGetRequest(t *testing.T) {
 				emptyBody: true,
 			},
 			hookBefore: func(key string, mock *testutils.Mock) {
-				mock.App.EXPECT().GetURL(gomock.Any(), key).Return("http://bar.buz", true, nil)
+				mock.App.EXPECT().
+					GetURL(gomock.Any(), key).
+					Return(&models.GetURLResponseItem{URL: "http://bar.buz"}, nil)
 			},
 		},
 	}

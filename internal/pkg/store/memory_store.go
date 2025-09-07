@@ -65,12 +65,18 @@ func (s *MemoryStore) CheckAvailability(context.Context) error {
 	return nil
 }
 
-func (s *MemoryStore) Load(_ context.Context, key string) (string, bool, error) {
+func (s *MemoryStore) Load(_ context.Context, key string) (*models.URLItem, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
 	value, ok := s.keyToValueMap[key]
-	return value, ok, nil
+	if !ok {
+		return nil, nil
+	}
+
+	return &models.URLItem{
+		URL: value,
+	}, nil
 }
 
 func (s *MemoryStore) LoadAllByUserID(context.Context, uuid.UUID) ([]*models.KeyOriginalURLItem, error) {
@@ -102,6 +108,10 @@ func (s *MemoryStore) SaveBatch(ctx context.Context, requestItems []*models.Batc
 	}
 
 	return responseItems, nil
+}
+
+func (s *MemoryStore) DeleteBatch(context.Context, []string, uuid.UUID) error {
+	return nil
 }
 
 func (s *MemoryStore) saveValue(ctx context.Context, value string) (string, error) {

@@ -33,17 +33,22 @@ func NewHandler(shortener App, parameters parameters.AppParameters, logger logge
 }
 
 func (h *Handler) HandleGetRequest(response http.ResponseWriter, request *http.Request, key string) {
-	value, ok, err := h.shortener.GetURL(request.Context(), key)
+	item, err := h.shortener.GetURL(request.Context(), key)
 	if err != nil {
 		utils.HandleServerError(response, err, h.logger)
 		return
 	}
-	if !ok {
+	if item == nil {
 		utils.HandleRequestError(response, errors.New("key was not found"), h.logger)
 		return
 	}
 
-	response.Header().Set(headers.Location, value)
+	if item.IsDeleted {
+		response.WriteHeader(http.StatusGone)
+		return
+	}
+
+	response.Header().Set(headers.Location, item.URL)
 	response.WriteHeader(http.StatusTemporaryRedirect)
 }
 
@@ -157,6 +162,20 @@ func (h *Handler) HandleAPIBatchRequest(response http.ResponseWriter, request *h
 		utils.HandleServerError(response, err, h.logger)
 		return
 	}
+}
+
+func (h *Handler) HandleBatchDeleteRequest(response http.ResponseWriter, request *http.Request) {
+	var keys []string
+	if err := json.NewDecoder(request.Body).Decode(&keys); err != nil {
+		utils.HandleRequestError(response, err, h.logger)
+		return
+	}
+
+	ctx := request.Context()
+	userID := middleware.GetUserIDFromContext(ctx)
+	h.shortener.DeleteURLs(keys, userID)
+
+	response.WriteHeader(http.StatusAccepted)
 }
 
 func (h *Handler) HandlePingRequest(response http.ResponseWriter, request *http.Request) {

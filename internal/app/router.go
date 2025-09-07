@@ -60,6 +60,17 @@ func (r *Router) NewMuxHandler() http.Handler {
 				middleware.UserIDOptionsRequireValidToken),
 			r.logger))
 
+	mux.Delete("/api/user/urls",
+		middleware.LogHandler(
+			middleware.UserIDHandler(
+				setContentType(
+					middleware.GzipHandler(r.handler.HandleBatchDeleteRequest),
+					mimetype.ApplicationJSON, mimetypeApplicationGZIP),
+				r.parameters,
+				r.logger,
+				middleware.UserIDOptionsRequireValidToken),
+			r.logger))
+
 	mux.Post("/",
 		middleware.LogHandler(
 			middleware.UserIDHandler(

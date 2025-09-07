@@ -57,17 +57,35 @@ func (s *DatabaseStore) CheckAvailability(ctx context.Context) error {
 	return nil
 }
 
-func (s *DatabaseStore) Load(ctx context.Context, key string) (string, bool, error) {
-	var url string
-	if err := s.connection.QueryRow(ctx, &url, "select original_url from urls where url_key = $1", key); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", false, nil
-		}
-
-		return "", false, fmt.Errorf("Load, queryExecutor.QueryRow failed: %w", err)
+func (s *DatabaseStore) Load(ctx context.Context, key string) (*models.URLItem, error) {
+	rows, err := s.connection.QueryRows(
+		ctx,
+		"select original_url, is_deleted from urls where url_key = $1",
+		key,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("DatabaseStore.Load, connection.QueryRows failed: %w", err)
 	}
 
-	return url, true, nil
+	defer rows.Close()
+
+	var item *models.URLItem
+	for rows.Next() {
+		item = &models.URLItem{}
+		err = rows.Scan(&item.URL, &item.IsDeleted)
+		if err != nil {
+			return nil, fmt.Errorf("DatabaseStore.Load, rows.Scan failed: %w", err)
+		}
+
+		// It should be only one item.
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, fmt.Errorf("DatabaseStore.Load, rows.Err failed: %w", err)
+	}
+
+	return item, nil
 }
 
 func (s *DatabaseStore) LoadAllByUserID(ctx context.Context, userID uuid.UUID) ([]*models.KeyOriginalURLItem, error) {
@@ -154,6 +172,19 @@ func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*models.Ba
 	}
 
 	return responseItems, nil
+}
+
+func (s *DatabaseStore) DeleteBatch(ctx context.Context, keys []string, userID uuid.UUID) error {
+	err := s.connection.Exec(
+		ctx,
+		"update urls set is_deleted = true where url_key = any($1) and user_id = $2",
+		keys,
+		userID)
+	if err != nil {
+		return fmt.Errorf("DatabaseStore.DeleteBatch, connection.Exec failed: %w", err)
+	}
+
+	return nil
 }
 
 func (s *DatabaseStore) saver(ctx context.Context, executor executorFunc, key, value string, userID uuid.UUID) (bool, error) {

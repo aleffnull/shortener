@@ -123,7 +123,7 @@ func (c *connectionImpl) Exec(ctx context.Context, sql string, args ...any) erro
 
 	_, err := c.db.ExecContext(ctx, sql, args...)
 	if err != nil {
-		return fmt.Errorf("connectionImpl.InsertRow, pool.Exec failed: %w", err)
+		return fmt.Errorf("connectionImpl.Exec, db.ExecContext failed: %w", err)
 	}
 
 	return nil

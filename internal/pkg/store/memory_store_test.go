@@ -30,11 +30,10 @@ func TestMemoryStore_Load_UnknownKey(t *testing.T) {
 	store := NewMemoryStore(mock.ColdStore, configuration, mock.Logger)
 
 	// Act.
-	value, ok, err := store.Load(ctx, "foo")
+	item, err := store.Load(ctx, "foo")
 
 	// Assert.
-	require.Empty(t, value)
-	require.False(t, ok)
+	require.Nil(t, item)
 	require.NoError(t, err)
 }
 
@@ -58,13 +57,13 @@ func TestMemoryStore_SaveAndLoad(t *testing.T) {
 	// Act.
 	key, err := store.Save(ctx, "foo", uuid.New())
 	require.NoError(t, err)
-	value, ok, err := store.Load(ctx, key)
+	item, err := store.Load(ctx, key)
 	require.NoError(t, err)
 
 	// Assert.
 	require.NotEmpty(t, key)
-	require.True(t, ok)
-	require.Equal(t, "foo", value)
+	require.NotNil(t, item)
+	require.Equal(t, "foo", item.URL)
 }
 
 func TestMemoryStore_InitAndLoad(t *testing.T) {
@@ -93,12 +92,12 @@ func TestMemoryStore_InitAndLoad(t *testing.T) {
 	// Act.
 	err := store.Init()
 	require.NoError(t, err)
-	value, ok, err := store.Load(ctx, "key")
+	item, err := store.Load(ctx, "key")
 	require.NoError(t, err)
 
 	// Assert.
-	require.True(t, ok)
-	require.Equal(t, "foo", value)
+	require.NotNil(t, item)
+	require.Equal(t, "foo", item.URL)
 }
 
 func TestMemoryStore_Save_NotUniqueKey(t *testing.T) {

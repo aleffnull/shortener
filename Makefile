@@ -40,5 +40,6 @@ autotest: build
 	shortenertestbeta -test.v -test.run=^TestIteration12$$ -binary-path=$(EXE) -database-dsn=$(DATABASE_CONN_STRING)
 	shortenertestbeta -test.v -test.run=^TestIteration13$$ -binary-path=$(EXE) -database-dsn=$(DATABASE_CONN_STRING)
 	shortenertestbeta -test.v -test.run=^TestIteration14$$ -binary-path=$(EXE) -database-dsn=$(DATABASE_CONN_STRING)
+	shortenertestbeta -test.v -test.run=^TestIteration15$$ -binary-path=$(EXE) -database-dsn=$(DATABASE_CONN_STRING)
 
 test: unittest statictest autotest

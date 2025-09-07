@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sync"
+	"time"
 
 	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/pkg/database"
@@ -19,11 +21,18 @@ import (
 )
 
 type ShortenerApp struct {
-	connection    database.Connection
-	storage       store.Store
-	logger        logger.Logger
-	parameters    parameters.AppParameters
-	configuration *config.Configuration
+	connection        database.Connection
+	storage           store.Store
+	logger            logger.Logger
+	parameters        parameters.AppParameters
+	configuration     *config.Configuration
+	deleteURLsChannel chan deleteURLsRequest
+	quitChannel       chan struct{}
+}
+
+type deleteURLsRequest struct {
+	keys   []string
+	userID uuid.UUID
 }
 
 var _ App = (*ShortenerApp)(nil)
@@ -36,11 +45,13 @@ func NewShortenerApp(
 	configuration *config.Configuration,
 ) App {
 	return &ShortenerApp{
-		connection:    connection,
-		storage:       storage,
-		logger:        logger,
-		parameters:    parameters,
-		configuration: configuration,
+		connection:        connection,
+		storage:           storage,
+		logger:            logger,
+		parameters:        parameters,
+		configuration:     configuration,
+		deleteURLsChannel: make(chan deleteURLsRequest, 100),
+		quitChannel:       make(chan struct{}),
 	}
 }
 
@@ -57,16 +68,32 @@ func (s *ShortenerApp) Init(ctx context.Context) error {
 		return fmt.Errorf("ShortenerApp.Init, parameters.Init failed: %w", err)
 	}
 
+	go s.deletePendingURLs()
+
 	return nil
 }
 
 func (s *ShortenerApp) Shutdown() {
+	close(s.quitChannel)
+	close(s.deleteURLsChannel)
 	s.storage.Shutdown()
 	s.connection.Shutdown()
 }
 
-func (s *ShortenerApp) GetURL(ctx context.Context, key string) (string, bool, error) {
-	return s.storage.Load(ctx, key)
+func (s *ShortenerApp) GetURL(ctx context.Context, key string) (*models.GetURLResponseItem, error) {
+	item, err := s.storage.Load(ctx, key)
+	if err != nil {
+		return nil, fmt.Errorf("ShortenerApp.GetURL, storage.Load failed: %w", err)
+	}
+
+	if item == nil {
+		return nil, nil
+	}
+
+	return &models.GetURLResponseItem{
+		URL:       item.URL,
+		IsDeleted: item.IsDeleted,
+	}, nil
 }
 
 func (s *ShortenerApp) GetUserURLs(ctx context.Context, userID uuid.UUID) ([]*models.UserURLsResponseItem, error) {
@@ -150,6 +177,13 @@ func (s *ShortenerApp) ShortenURLBatch(ctx context.Context, requestItems []*mode
 	return responseItems, nil
 }
 
+func (s *ShortenerApp) DeleteURLs(keys []string, userID uuid.UUID) {
+	s.deleteURLsChannel <- deleteURLsRequest{
+		keys:   keys,
+		userID: userID,
+	}
+}
+
 func (s *ShortenerApp) CheckStore(ctx context.Context) error {
 	err := s.storage.CheckAvailability(ctx)
 	if err != nil {
@@ -157,4 +191,61 @@ func (s *ShortenerApp) CheckStore(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *ShortenerApp) deletePendingURLs() {
+	ticker := time.NewTicker(3 * time.Second)
+
+	requests := []deleteURLsRequest{}
+	for {
+		select {
+		case <-s.quitChannel:
+			// Завершаем работу.
+			return
+		case request := <-s.deleteURLsChannel:
+			// Накапливаем сообщения.
+			requests = append(requests, request)
+		case <-ticker.C:
+			// Пробуем выполнить удаление при каждом срабатывании таймера.
+			if len(requests) == 0 {
+				continue
+			}
+
+			requests = s.doDeleteURLs(requests)
+		}
+	}
+}
+
+func (s *ShortenerApp) doDeleteURLs(requests []deleteURLsRequest) []deleteURLsRequest {
+	// Ограничиваем количество одновременных запросов к базе.
+	semaphore := make(chan struct{}, 5)
+	waitGroup := sync.WaitGroup{}
+	// Если что-то не смогли удалить, нужно это сохранить.
+	nonDeletedChannel := make(chan deleteURLsRequest, len(requests))
+
+	for _, request := range requests {
+		semaphore <- struct{}{}
+		waitGroup.Add(1)
+
+		go func() {
+			defer waitGroup.Done()
+			defer func() { <-semaphore }()
+
+			if err := s.storage.DeleteBatch(context.Background(), request.keys, request.userID); err != nil {
+				s.logger.Errorf("ShortenerApp.deletePendingURLs, storage.DeleteBatch failed: %v", err)
+				nonDeletedChannel <- request
+			}
+		}()
+	}
+
+	waitGroup.Wait()
+	close(nonDeletedChannel)
+
+	// Восстановим то, что не смогли удалить.
+	notDeletedRequests := []deleteURLsRequest{}
+	for request := range nonDeletedChannel {
+		notDeletedRequests = append(notDeletedRequests, request)
+	}
+
+	return notDeletedRequests
 }

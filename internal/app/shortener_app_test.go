@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/aleffnull/shortener/internal/config"
+	pkg_models "github.com/aleffnull/shortener/internal/pkg/models"
 	"github.com/aleffnull/shortener/internal/pkg/testutils"
 	"github.com/aleffnull/shortener/models"
 	"github.com/google/uuid"
@@ -23,16 +24,16 @@ func TestShortenerApp_GetURL(t *testing.T) {
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	mock := testutils.NewMock(ctrl)
-	mock.Store.EXPECT().Load(gomock.Any(), key).Return(shortURL, true, nil)
+	mock.Store.EXPECT().Load(gomock.Any(), key).Return(&pkg_models.URLItem{URL: shortURL}, nil)
 	configuration := &config.Configuration{}
 	shortener := NewShortenerApp(mock.Connection, mock.Store, mock.Logger, mock.AppParameters, configuration)
 
 	// Act.
-	url, ok, err := shortener.GetURL(ctx, key)
+	item, err := shortener.GetURL(ctx, key)
 
 	// Assert.
-	require.Equal(t, shortURL, url)
-	require.True(t, ok)
+	require.NotNil(t, item)
+	require.Equal(t, shortURL, item.URL)
 	require.NoError(t, err)
 }
 

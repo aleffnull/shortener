@@ -56,6 +56,20 @@ func (mr *MockStoreMockRecorder) CheckAvailability(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAvailability", reflect.TypeOf((*MockStore)(nil).CheckAvailability), arg0)
 }
 
+// DeleteBatch mocks base method.
+func (m *MockStore) DeleteBatch(arg0 context.Context, arg1 []string, arg2 uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteBatch", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteBatch indicates an expected call of DeleteBatch.
+func (mr *MockStoreMockRecorder) DeleteBatch(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBatch", reflect.TypeOf((*MockStore)(nil).DeleteBatch), arg0, arg1, arg2)
+}
+
 // Init mocks base method.
 func (m *MockStore) Init() error {
 	m.ctrl.T.Helper()
@@ -71,13 +85,12 @@ func (mr *MockStoreMockRecorder) Init() *gomock.Call {
 }
 
 // Load mocks base method.
-func (m *MockStore) Load(arg0 context.Context, arg1 string) (string, bool, error) {
+func (m *MockStore) Load(arg0 context.Context, arg1 string) (*models.URLItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Load", arg0, arg1)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(bool)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret0, _ := ret[0].(*models.URLItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Load indicates an expected call of Load.

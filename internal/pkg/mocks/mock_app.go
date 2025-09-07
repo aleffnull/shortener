@@ -56,14 +56,25 @@ func (mr *MockAppMockRecorder) CheckStore(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckStore", reflect.TypeOf((*MockApp)(nil).CheckStore), arg0)
 }
 
+// DeleteURLs mocks base method.
+func (m *MockApp) DeleteURLs(arg0 []string, arg1 uuid.UUID) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "DeleteURLs", arg0, arg1)
+}
+
+// DeleteURLs indicates an expected call of DeleteURLs.
+func (mr *MockAppMockRecorder) DeleteURLs(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteURLs", reflect.TypeOf((*MockApp)(nil).DeleteURLs), arg0, arg1)
+}
+
 // GetURL mocks base method.
-func (m *MockApp) GetURL(arg0 context.Context, arg1 string) (string, bool, error) {
+func (m *MockApp) GetURL(arg0 context.Context, arg1 string) (*models.GetURLResponseItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetURL", arg0, arg1)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(bool)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret0, _ := ret[0].(*models.GetURLResponseItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // GetURL indicates an expected call of GetURL.
