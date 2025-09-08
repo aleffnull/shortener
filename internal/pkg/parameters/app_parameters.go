@@ -9,7 +9,7 @@ import (
 
 type AppParameters interface {
 	Init(context.Context) error
-	GetJWTSingningKey() string
+	GetJWTSigningKey() string
 }
 
 type appParametersImpl struct {
@@ -39,6 +39,6 @@ func (i *appParametersImpl) Init(ctx context.Context) error {
 	return nil
 }
 
-func (i *appParametersImpl) GetJWTSingningKey() string {
+func (i *appParametersImpl) GetJWTSigningKey() string {
 	return i.jwtSingningKey
 }

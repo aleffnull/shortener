@@ -5,12 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
+	"github.com/aleffnull/shortener/internal/pkg/authorization"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
-	"github.com/aleffnull/shortener/internal/pkg/parameters"
 	"github.com/aleffnull/shortener/internal/pkg/utils"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -20,11 +18,6 @@ const (
 	UserIDOptionsNone UserIDOptions = iota
 	UserIDOptionsRequireValidToken
 )
-
-type Claims struct {
-	jwt.RegisteredClaims
-	UserID uuid.UUID
-}
 
 type tokenStatus int
 
@@ -38,19 +31,18 @@ const (
 type contextKey int
 
 const (
-	jwtTokenDuration            = 24 * time.Hour
 	userIDCookieName            = "X-UserID"
 	userIDContextKey contextKey = iota
 )
 
 func UserIDHandler(
 	handlerFunc http.HandlerFunc,
-	parameters parameters.AppParameters,
+	authorizationService authorization.Service,
 	logger logger.Logger,
 	options UserIDOptions,
 ) http.HandlerFunc {
 	return func(response http.ResponseWriter, request *http.Request) {
-		userID, status, err := getUserID(request, parameters)
+		userID, status, err := getUserID(request, authorizationService)
 		if err != nil {
 			utils.HandleServerError(response, err, logger)
 			return
@@ -67,7 +59,7 @@ func UserIDHandler(
 
 			// Либо никакого токена не было, либо он невалиден, но нам не важно.
 			userID = uuid.New()
-			err = setUserID(userID, response, parameters)
+			err = setUserID(userID, response, authorizationService)
 			if err != nil {
 				utils.HandleServerError(response, err, logger)
 				return
@@ -90,7 +82,7 @@ func GetUserIDFromContext(ctx context.Context) uuid.UUID {
 	return (value).(uuid.UUID)
 }
 
-func getUserID(request *http.Request, parameters parameters.AppParameters) (uuid.UUID, tokenStatus, error) {
+func getUserID(request *http.Request, authorizationService authorization.Service) (uuid.UUID, tokenStatus, error) {
 	cookie, err := request.Cookie(userIDCookieName)
 	if err != nil {
 		if errors.Is(err, http.ErrNoCookie) {
@@ -100,17 +92,10 @@ func getUserID(request *http.Request, parameters parameters.AppParameters) (uuid
 		return uuid.UUID{}, tokenStatusUnknown, fmt.Errorf("getUserID, request.Cookie failed: %w", err)
 	}
 
-	token, err := jwt.ParseWithClaims(
-		cookie.Value,
-		&Claims{},
-		func(t *jwt.Token) (any, error) {
-			return []byte(parameters.GetJWTSingningKey()), nil
-		},
-		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
-		jwt.WithExpirationRequired())
+	userID, err := authorizationService.GetUserIDFromToken(cookie.Value)
 	if err != nil {
-		if errors.Is(err, jwt.ErrTokenExpired) {
-			// Токен просрочился, поэтому невалиден.
+		if errors.Is(err, authorization.ErrTokenExpired) || errors.Is(err, authorization.ErrTokenInvalid) {
+			// Токен просрочился, поэтому невалиден, или сам по себе невалиден.
 			return uuid.UUID{}, tokenStatusInvalid, nil
 		}
 
@@ -118,29 +103,11 @@ func getUserID(request *http.Request, parameters parameters.AppParameters) (uuid
 		return uuid.UUID{}, tokenStatusUnknown, fmt.Errorf("getUserID, jwt.Parse failed: %w", err)
 	}
 
-	if !token.Valid {
-		// Токен оказался невалиден.
-		return uuid.UUID{}, tokenStatusInvalid, nil
-	}
-
-	claims, ok := token.Claims.(*Claims)
-	if !ok {
-		return uuid.UUID{}, tokenStatusUnknown, fmt.Errorf("getUserID, token.Claims.(*Claims) failed: %w", err)
-	}
-
-	return claims.UserID, tokenStatusValid, nil
+	return userID, tokenStatusValid, nil
 }
 
-func setUserID(userID uuid.UUID, response http.ResponseWriter, parameters parameters.AppParameters) error {
-	token := jwt.NewWithClaims(
-		jwt.SigningMethodHS256,
-		Claims{
-			RegisteredClaims: jwt.RegisteredClaims{
-				ExpiresAt: jwt.NewNumericDate(time.Now().Add(jwtTokenDuration)),
-			},
-			UserID: userID,
-		})
-	tokenString, err := token.SignedString([]byte(parameters.GetJWTSingningKey()))
+func setUserID(userID uuid.UUID, response http.ResponseWriter, authorizationService authorization.Service) error {
+	tokenString, err := authorizationService.CreateToken(userID)
 	if err != nil {
 		return fmt.Errorf("setUserID, token.SignedString failed: %w", err)
 	}

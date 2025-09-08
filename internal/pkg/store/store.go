@@ -10,16 +10,23 @@ import (
 	"github.com/google/uuid"
 )
 
-type Store interface {
+type StoreManager interface {
 	Init() error
 	Shutdown()
 	CheckAvailability(context.Context) error
+}
 
+type DataStore interface {
 	Load(context.Context, string) (*models.URLItem, error)
 	LoadAllByUserID(context.Context, uuid.UUID) ([]*models.KeyOriginalURLItem, error)
 	Save(context.Context, string, uuid.UUID) (string, error)
 	SaveBatch(context.Context, []*models.BatchRequestItem, uuid.UUID) ([]*models.BatchResponseItem, error)
 	DeleteBatch(context.Context, []string, uuid.UUID) error
+}
+
+type Store interface {
+	StoreManager
+	DataStore
 }
 
 type ColdStore interface {

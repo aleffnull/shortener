@@ -8,6 +8,7 @@ import (
 
 	"github.com/aleffnull/shortener/internal/app"
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/pkg/authorization"
 	"github.com/aleffnull/shortener/internal/pkg/database"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/parameters"
@@ -83,6 +84,7 @@ func main() {
 			store.NewFileStore,
 			store.NewStore,
 			parameters.NewAppParameters,
+			authorization.NewAuthorizationService,
 			NewShortenerApp,
 			app.NewHandler,
 			app.NewRouter,

@@ -40,18 +40,18 @@ func (m *MockAppParameters) EXPECT() *MockAppParametersMockRecorder {
 	return m.recorder
 }
 
-// GetJWTSingningKey mocks base method.
-func (m *MockAppParameters) GetJWTSingningKey() string {
+// GetJWTSigningKey mocks base method.
+func (m *MockAppParameters) GetJWTSigningKey() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetJWTSingningKey")
+	ret := m.ctrl.Call(m, "GetJWTSigningKey")
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
-// GetJWTSingningKey indicates an expected call of GetJWTSingningKey.
-func (mr *MockAppParametersMockRecorder) GetJWTSingningKey() *gomock.Call {
+// GetJWTSigningKey indicates an expected call of GetJWTSigningKey.
+func (mr *MockAppParametersMockRecorder) GetJWTSigningKey() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJWTSingningKey", reflect.TypeOf((*MockAppParameters)(nil).GetJWTSingningKey))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJWTSigningKey", reflect.TypeOf((*MockAppParameters)(nil).GetJWTSigningKey))
 }
 
 // Init mocks base method.
