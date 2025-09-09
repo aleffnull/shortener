@@ -19,6 +19,7 @@ type Connection interface {
 	Shutdown()
 	Ping(ctx context.Context) error
 	QueryRow(ctx context.Context, result any, sql string, args ...any) error
+	QueryRows(ctx context.Context, sql string, args ...any) (*sql.Rows, error)
 	Exec(ctx context.Context, sql string, args ...any) error
 	ExecTx(ctx context.Context, tx *sql.Tx, sql string, args ...any) error
 	DoInTx(ctx context.Context, action func(*sql.Tx) error) error
@@ -102,6 +103,19 @@ func (c *connectionImpl) QueryRow(ctx context.Context, result any, sql string, a
 	return nil
 }
 
+func (c *connectionImpl) QueryRows(ctx context.Context, sql string, args ...any) (*sql.Rows, error) {
+	if c.db == nil {
+		return nil, nil
+	}
+
+	rows, err := c.db.QueryContext(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("connectionImpl.QueryRows, db.QueryContext failed: %w", err)
+	}
+
+	return rows, nil
+}
+
 func (c *connectionImpl) Exec(ctx context.Context, sql string, args ...any) error {
 	if c.db == nil {
 		return nil
@@ -109,7 +123,7 @@ func (c *connectionImpl) Exec(ctx context.Context, sql string, args ...any) erro
 
 	_, err := c.db.ExecContext(ctx, sql, args...)
 	if err != nil {
-		return fmt.Errorf("connectionImpl.InsertRow, pool.Exec failed: %w", err)
+		return fmt.Errorf("connectionImpl.Exec, db.ExecContext failed: %w", err)
 	}
 
 	return nil

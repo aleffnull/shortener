@@ -8,6 +8,9 @@ import (
 	"net/http"
 
 	"github.com/aleffnull/shortener/internal/pkg/logger"
+	"github.com/aleffnull/shortener/internal/pkg/middleware"
+	"github.com/aleffnull/shortener/internal/pkg/parameters"
+	"github.com/aleffnull/shortener/internal/pkg/utils"
 	"github.com/aleffnull/shortener/models"
 	"github.com/go-http-utils/headers"
 	"github.com/go-playground/validator/v10"
@@ -16,51 +19,83 @@ import (
 )
 
 type Handler struct {
-	shortener App
-	logger    logger.Logger
+	shortener  App
+	parameters parameters.AppParameters
+	logger     logger.Logger
 }
 
-func NewHandler(shortener App, logger logger.Logger) *Handler {
+func NewHandler(shortener App, parameters parameters.AppParameters, logger logger.Logger) *Handler {
 	return &Handler{
-		shortener: shortener,
-		logger:    logger,
+		shortener:  shortener,
+		parameters: parameters,
+		logger:     logger,
 	}
 }
 
 func (h *Handler) HandleGetRequest(response http.ResponseWriter, request *http.Request, key string) {
-	value, ok, err := h.shortener.GetURL(request.Context(), key)
+	item, err := h.shortener.GetURL(request.Context(), key)
 	if err != nil {
-		h.handleServerError(response, err)
+		utils.HandleServerError(response, err, h.logger)
 		return
 	}
-	if !ok {
-		h.handleRequestError(response, errors.New("key was not found"))
+	if item == nil {
+		utils.HandleRequestError(response, errors.New("key was not found"), h.logger)
 		return
 	}
 
-	response.Header().Set(headers.Location, value)
+	if item.IsDeleted {
+		response.WriteHeader(http.StatusGone)
+		return
+	}
+
+	response.Header().Set(headers.Location, item.URL)
 	response.WriteHeader(http.StatusTemporaryRedirect)
+}
+
+func (h *Handler) HandleGetUserURLsRequest(response http.ResponseWriter, request *http.Request) {
+	ctx := request.Context()
+	userID := middleware.GetUserIDFromContext(ctx)
+	items, err := h.shortener.GetUserURLs(ctx, userID)
+	if err != nil {
+		utils.HandleServerError(response, err, h.logger)
+		return
+	}
+
+	if len(items) == 0 {
+		response.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	response.Header().Set(headers.ContentType, mimetype.ApplicationJSON)
+	response.WriteHeader(http.StatusOK)
+
+	if err = json.NewEncoder(response).Encode(items); err != nil {
+		utils.HandleServerError(response, err, h.logger)
+		return
+	}
 }
 
 func (h *Handler) HandlePostRequest(response http.ResponseWriter, request *http.Request) {
 	body, err := io.ReadAll(request.Body)
 	if err != nil {
-		h.handleServerError(response, err)
+		utils.HandleServerError(response, err, h.logger)
 		return
 	}
 
 	longURL := string(body)
 	if len(body) == 0 {
-		h.handleRequestError(response, errors.New("body is required"))
+		utils.HandleRequestError(response, errors.New("body is required"), h.logger)
 		return
 	}
 
 	shortenRequest := &models.ShortenRequest{
 		URL: longURL,
 	}
-	shortenerResponse, err := h.shortener.ShortenURL(request.Context(), shortenRequest)
+	ctx := request.Context()
+	userID := middleware.GetUserIDFromContext(ctx)
+	shortenerResponse, err := h.shortener.ShortenURL(ctx, shortenRequest, userID)
 	if err != nil {
-		h.handleServerError(response, err)
+		utils.HandleServerError(response, err, h.logger)
 		return
 	}
 
@@ -72,19 +107,21 @@ func (h *Handler) HandlePostRequest(response http.ResponseWriter, request *http.
 func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.Request) {
 	var shortenRequest models.ShortenRequest
 	if err := json.NewDecoder(request.Body).Decode(&shortenRequest); err != nil {
-		h.handleRequestError(response, err)
+		utils.HandleRequestError(response, err, h.logger)
 		return
 	}
 
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	if err := validate.Struct(shortenRequest); err != nil {
-		h.handleRequestError(response, err)
+		utils.HandleRequestError(response, err, h.logger)
 		return
 	}
 
-	shortenerResponse, err := h.shortener.ShortenURL(request.Context(), &shortenRequest)
+	ctx := request.Context()
+	userID := middleware.GetUserIDFromContext(ctx)
+	shortenerResponse, err := h.shortener.ShortenURL(ctx, &shortenRequest, userID)
 	if err != nil {
-		h.handleServerError(response, err)
+		utils.HandleServerError(response, err, h.logger)
 		return
 	}
 
@@ -92,7 +129,7 @@ func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.R
 	response.WriteHeader(lo.Ternary(shortenerResponse.IsDuplicate, http.StatusConflict, http.StatusCreated))
 
 	if err = json.NewEncoder(response).Encode(shortenerResponse); err != nil {
-		h.handleServerError(response, err)
+		utils.HandleServerError(response, err, h.logger)
 		return
 	}
 }
@@ -100,19 +137,21 @@ func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.R
 func (h *Handler) HandleAPIBatchRequest(response http.ResponseWriter, request *http.Request) {
 	var requestItems []*models.ShortenBatchRequestItem
 	if err := json.NewDecoder(request.Body).Decode(&requestItems); err != nil {
-		h.handleRequestError(response, err)
+		utils.HandleRequestError(response, err, h.logger)
 		return
 	}
 
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	if err := validate.Var(requestItems, "omitempty,dive"); err != nil {
-		h.handleRequestError(response, err)
+		utils.HandleRequestError(response, err, h.logger)
 		return
 	}
 
-	shortenerBatchResponse, err := h.shortener.ShortenURLBatch(request.Context(), requestItems)
+	ctx := request.Context()
+	userID := middleware.GetUserIDFromContext(ctx)
+	shortenerBatchResponse, err := h.shortener.ShortenURLBatch(ctx, requestItems, userID)
 	if err != nil {
-		h.handleServerError(response, err)
+		utils.HandleServerError(response, err, h.logger)
 		return
 	}
 
@@ -120,27 +159,31 @@ func (h *Handler) HandleAPIBatchRequest(response http.ResponseWriter, request *h
 	response.WriteHeader(http.StatusCreated)
 
 	if err = json.NewEncoder(response).Encode(shortenerBatchResponse); err != nil {
-		h.handleServerError(response, err)
+		utils.HandleServerError(response, err, h.logger)
 		return
 	}
+}
+
+func (h *Handler) HandleBatchDeleteRequest(response http.ResponseWriter, request *http.Request) {
+	var keys []string
+	if err := json.NewDecoder(request.Body).Decode(&keys); err != nil {
+		utils.HandleRequestError(response, err, h.logger)
+		return
+	}
+
+	ctx := request.Context()
+	userID := middleware.GetUserIDFromContext(ctx)
+	h.shortener.DeleteURLs(keys, userID)
+
+	response.WriteHeader(http.StatusAccepted)
 }
 
 func (h *Handler) HandlePingRequest(response http.ResponseWriter, request *http.Request) {
 	err := h.shortener.CheckStore(request.Context())
 	if err != nil {
-		h.handleServerError(response, err)
+		utils.HandleServerError(response, err, h.logger)
 		return
 	}
 
 	response.WriteHeader(http.StatusOK)
-}
-
-func (h *Handler) handleServerError(response http.ResponseWriter, err error) {
-	h.logger.Errorf("Server error: %v", err)
-	http.Error(response, "Internal server error", http.StatusInternalServerError)
-}
-
-func (h *Handler) handleRequestError(response http.ResponseWriter, err error) {
-	h.logger.Errorf("Request error: %v", err)
-	http.Error(response, err.Error(), http.StatusBadRequest)
 }

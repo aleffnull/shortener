@@ -89,3 +89,20 @@ func (mr *MockLoggerMockRecorder) Infof(template any, args ...any) *gomock.Call 
 	varargs := append([]any{template}, args...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Infof", reflect.TypeOf((*MockLogger)(nil).Infof), varargs...)
 }
+
+// Warnf mocks base method.
+func (m *MockLogger) Warnf(template string, args ...any) {
+	m.ctrl.T.Helper()
+	varargs := []any{template}
+	for _, a := range args {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "Warnf", varargs...)
+}
+
+// Warnf indicates an expected call of Warnf.
+func (mr *MockLoggerMockRecorder) Warnf(template any, args ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{template}, args...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Warnf", reflect.TypeOf((*MockLogger)(nil).Warnf), varargs...)
+}

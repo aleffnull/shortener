@@ -9,6 +9,7 @@ import (
 	"github.com/aleffnull/shortener/internal/pkg/errors"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/models"
+	"github.com/google/uuid"
 )
 
 type MemoryStore struct {
@@ -64,22 +65,32 @@ func (s *MemoryStore) CheckAvailability(context.Context) error {
 	return nil
 }
 
-func (s *MemoryStore) Load(_ context.Context, key string) (string, bool, error) {
+func (s *MemoryStore) Load(_ context.Context, key string) (*models.URLItem, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
 	value, ok := s.keyToValueMap[key]
-	return value, ok, nil
+	if !ok {
+		return nil, nil
+	}
+
+	return &models.URLItem{
+		URL: value,
+	}, nil
 }
 
-func (s *MemoryStore) Save(ctx context.Context, value string) (string, error) {
+func (s *MemoryStore) LoadAllByUserID(context.Context, uuid.UUID) ([]*models.KeyOriginalURLItem, error) {
+	return nil, nil
+}
+
+func (s *MemoryStore) Save(ctx context.Context, value string, _ uuid.UUID) (string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	return s.saveValue(ctx, value)
 }
 
-func (s *MemoryStore) SaveBatch(ctx context.Context, requestItems []*models.BatchRequestItem) ([]*models.BatchResponseItem, error) {
+func (s *MemoryStore) SaveBatch(ctx context.Context, requestItems []*models.BatchRequestItem, _ uuid.UUID) ([]*models.BatchResponseItem, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -97,6 +108,10 @@ func (s *MemoryStore) SaveBatch(ctx context.Context, requestItems []*models.Batc
 	}
 
 	return responseItems, nil
+}
+
+func (s *MemoryStore) DeleteBatch(context.Context, []string, uuid.UUID) error {
+	return nil
 }
 
 func (s *MemoryStore) saveValue(ctx context.Context, value string) (string, error) {

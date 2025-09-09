@@ -11,6 +11,7 @@ import (
 	pkg_errors "github.com/aleffnull/shortener/internal/pkg/errors"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/models"
+	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -56,22 +57,71 @@ func (s *DatabaseStore) CheckAvailability(ctx context.Context) error {
 	return nil
 }
 
-func (s *DatabaseStore) Load(ctx context.Context, key string) (string, bool, error) {
-	var url string
-	if err := s.connection.QueryRow(ctx, &url, "select original_url from urls where url_key = $1", key); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", false, nil
-		}
-
-		return "", false, fmt.Errorf("Load, queryExecutor.QueryRow failed: %w", err)
+func (s *DatabaseStore) Load(ctx context.Context, key string) (*models.URLItem, error) {
+	rows, err := s.connection.QueryRows(
+		ctx,
+		"select original_url, is_deleted from urls where url_key = $1",
+		key,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("DatabaseStore.Load, connection.QueryRows failed: %w", err)
 	}
 
-	return url, true, nil
+	defer rows.Close()
+
+	var item *models.URLItem
+	for rows.Next() {
+		item = &models.URLItem{}
+		err = rows.Scan(&item.URL, &item.IsDeleted)
+		if err != nil {
+			return nil, fmt.Errorf("DatabaseStore.Load, rows.Scan failed: %w", err)
+		}
+
+		// It should be only one item.
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, fmt.Errorf("DatabaseStore.Load, rows.Err failed: %w", err)
+	}
+
+	return item, nil
 }
 
-func (s *DatabaseStore) Save(ctx context.Context, value string) (string, error) {
+func (s *DatabaseStore) LoadAllByUserID(ctx context.Context, userID uuid.UUID) ([]*models.KeyOriginalURLItem, error) {
+	rows, err := s.connection.QueryRows(
+		ctx,
+		"select url_key, original_url from urls where user_id = $1",
+		userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("DatabaseStore.LoadAllByUserID, connection.QueryRows failed: %w", err)
+	}
+
+	defer rows.Close()
+
+	items := []*models.KeyOriginalURLItem{}
+	for rows.Next() {
+		item := &models.KeyOriginalURLItem{}
+		err = rows.Scan(&item.URLKey, &item.OriginalURL)
+		if err != nil {
+			return nil, fmt.Errorf("DatabaseStore.LoadAllByUserID, rows.Scan failed: %w", err)
+		}
+
+		items = append(items, item)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, fmt.Errorf("DatabaseStore.LoadAllByUserID, rows.Err failed: %w", err)
+	}
+
+	return items, nil
+}
+
+func (s *DatabaseStore) Save(ctx context.Context, value string, userID uuid.UUID) (string, error) {
 	key, err := s.saveWithUniqueKey(ctx, value, func(ctx context.Context, key, value string) (bool, error) {
-		return s.saver(ctx, s.connection.Exec, key, value)
+		return s.saver(ctx, s.connection.Exec, key, value, userID)
 	})
 
 	if err != nil {
@@ -91,7 +141,7 @@ func (s *DatabaseStore) Save(ctx context.Context, value string) (string, error) 
 	return key, nil
 }
 
-func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*models.BatchRequestItem) ([]*models.BatchResponseItem, error) {
+func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*models.BatchRequestItem, userID uuid.UUID) ([]*models.BatchResponseItem, error) {
 	responseItems := make([]*models.BatchResponseItem, 0, len(requestItems))
 	err := s.connection.DoInTx(
 		ctx,
@@ -101,7 +151,7 @@ func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*models.Ba
 					executor := func(ctx context.Context, sql string, args ...any) error {
 						return s.connection.ExecTx(ctx, tx, sql, args...)
 					}
-					return s.saver(ctx, executor, key, value)
+					return s.saver(ctx, executor, key, value, userID)
 				})
 				if err != nil {
 					return fmt.Errorf("DatabaseStore.SaveBatch, s.saveWithUniqueKey failed: %w", err)
@@ -124,11 +174,24 @@ func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*models.Ba
 	return responseItems, nil
 }
 
-func (s *DatabaseStore) saver(ctx context.Context, executor executorFunc, key, value string) (bool, error) {
+func (s *DatabaseStore) DeleteBatch(ctx context.Context, keys []string, userID uuid.UUID) error {
+	err := s.connection.Exec(
+		ctx,
+		"update urls set is_deleted = true where url_key = any($1) and user_id = $2",
+		keys,
+		userID)
+	if err != nil {
+		return fmt.Errorf("DatabaseStore.DeleteBatch, connection.Exec failed: %w", err)
+	}
+
+	return nil
+}
+
+func (s *DatabaseStore) saver(ctx context.Context, executor executorFunc, key, value string, userID uuid.UUID) (bool, error) {
 	err := executor(
 		ctx,
-		"insert into urls (url_key, original_url) values ($1, $2)",
-		key, value,
+		"insert into urls (url_key, original_url, user_id) values ($1, $2, $3)",
+		key, value, userID.String(),
 	)
 
 	if err != nil {

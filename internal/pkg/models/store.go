@@ -14,3 +14,13 @@ type BatchResponseItem struct {
 	CorelationID string
 	Key          string
 }
+
+type KeyOriginalURLItem struct {
+	URLKey      string
+	OriginalURL string
+}
+
+type URLItem struct {
+	URL       string
+	IsDeleted bool
+}
