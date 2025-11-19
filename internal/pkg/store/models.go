@@ -1,4 +1,4 @@
-package models
+package store
 
 type ColdStoreEntry struct {
 	Key   string `json:"key"`

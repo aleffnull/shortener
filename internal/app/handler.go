@@ -7,8 +7,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/aleffnull/shortener/internal/middleware"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
-	"github.com/aleffnull/shortener/internal/pkg/middleware"
 	"github.com/aleffnull/shortener/internal/pkg/parameters"
 	"github.com/aleffnull/shortener/internal/pkg/utils"
 	"github.com/aleffnull/shortener/models"

@@ -6,9 +6,7 @@ import (
 	"sync"
 
 	"github.com/aleffnull/shortener/internal/config"
-	"github.com/aleffnull/shortener/internal/pkg/errors"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
-	"github.com/aleffnull/shortener/internal/pkg/models"
 	"github.com/google/uuid"
 )
 
@@ -65,7 +63,7 @@ func (s *MemoryStore) CheckAvailability(context.Context) error {
 	return nil
 }
 
-func (s *MemoryStore) Load(_ context.Context, key string) (*models.URLItem, error) {
+func (s *MemoryStore) Load(_ context.Context, key string) (*URLItem, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -74,12 +72,12 @@ func (s *MemoryStore) Load(_ context.Context, key string) (*models.URLItem, erro
 		return nil, nil
 	}
 
-	return &models.URLItem{
+	return &URLItem{
 		URL: value,
 	}, nil
 }
 
-func (s *MemoryStore) LoadAllByUserID(context.Context, uuid.UUID) ([]*models.KeyOriginalURLItem, error) {
+func (s *MemoryStore) LoadAllByUserID(context.Context, uuid.UUID) ([]*KeyOriginalURLItem, error) {
 	return nil, nil
 }
 
@@ -90,18 +88,18 @@ func (s *MemoryStore) Save(ctx context.Context, value string, _ uuid.UUID) (stri
 	return s.saveValue(ctx, value)
 }
 
-func (s *MemoryStore) SaveBatch(ctx context.Context, requestItems []*models.BatchRequestItem, _ uuid.UUID) ([]*models.BatchResponseItem, error) {
+func (s *MemoryStore) SaveBatch(ctx context.Context, requestItems []*BatchRequestItem, _ uuid.UUID) ([]*BatchResponseItem, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	responseItems := make([]*models.BatchResponseItem, 0, len(requestItems))
+	responseItems := make([]*BatchResponseItem, 0, len(requestItems))
 	for _, requestItem := range requestItems {
 		key, err := s.saveValue(ctx, requestItem.OriginalURL)
 		if err != nil {
 			return nil, fmt.Errorf("SaveBatch, saveValue failed: %w", err)
 		}
 
-		responseItems = append(responseItems, &models.BatchResponseItem{
+		responseItems = append(responseItems, &BatchResponseItem{
 			CorelationID: requestItem.CorelationID,
 			Key:          key,
 		})
@@ -122,7 +120,7 @@ func (s *MemoryStore) saveValue(ctx context.Context, value string) (string, erro
 	}
 
 	// Save to cold store.
-	coldStoreEntry := &models.ColdStoreEntry{
+	coldStoreEntry := &ColdStoreEntry{
 		Key:   key,
 		Value: value,
 	}
@@ -140,7 +138,7 @@ func (s *MemoryStore) saver(_ context.Context, key, value string) (bool, error) 
 	}
 
 	if existingKey, ok := s.valueToKeyMap[value]; ok {
-		return false, errors.NewDuplicateURLError(existingKey, value)
+		return false, NewDuplicateURLError(existingKey, value)
 	}
 
 	s.keyToValueMap[key] = value

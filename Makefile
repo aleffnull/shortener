@@ -15,7 +15,7 @@ run:
 
 mock:
 	mockgen -source internal/app/app.go -destination internal/pkg/mocks/mock_app.go -package mocks
-	mockgen -source internal/pkg/database/connection.go -destination internal/pkg/mocks/mock_connection.go -package mocks
+	mockgen -source internal/repository/connection.go -destination internal/pkg/mocks/mock_connection.go -package mocks
 	mockgen -source internal/pkg/logger/logger.go -destination internal/pkg/mocks/mock_logger.go -package mocks
 	mockgen -source internal/pkg/parameters/app_parameters.go -destination internal/pkg/mocks/mock_app_parameters.go -package mocks
 	mockgen -source internal/pkg/store/store.go -destination internal/pkg/mocks/mock_store.go -package mocks

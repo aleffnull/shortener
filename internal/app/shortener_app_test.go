@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/aleffnull/shortener/internal/config"
-	pkg_models "github.com/aleffnull/shortener/internal/pkg/models"
-	"github.com/aleffnull/shortener/internal/pkg/testutils"
+	"github.com/aleffnull/shortener/internal/pkg/mocks"
+	"github.com/aleffnull/shortener/internal/pkg/store"
 	"github.com/aleffnull/shortener/models"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -23,8 +23,8 @@ func TestShortenerApp_GetURL(t *testing.T) {
 	// Arrange.
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
-	mock := testutils.NewMock(ctrl)
-	mock.Store.EXPECT().Load(gomock.Any(), key).Return(&pkg_models.URLItem{URL: shortURL}, nil)
+	mock := mocks.NewMock(ctrl)
+	mock.Store.EXPECT().Load(gomock.Any(), key).Return(&store.URLItem{URL: shortURL}, nil)
 	configuration := &config.Configuration{}
 	shortener := NewShortenerApp(mock.Connection, mock.Store, mock.Logger, mock.AppParameters, configuration)
 
@@ -44,7 +44,7 @@ func TestShortenerApp_ShortenURL(t *testing.T) {
 		request       *models.ShortenRequest
 		response      *models.ShortenResponse
 		wantError     bool
-		hookBefore    func(request *models.ShortenRequest, mock *testutils.Mock)
+		hookBefore    func(request *models.ShortenRequest, mock *mocks.Mock)
 	}{
 		{
 			name:          "storage error",
@@ -53,7 +53,7 @@ func TestShortenerApp_ShortenURL(t *testing.T) {
 				URL: "foo",
 			},
 			wantError: true,
-			hookBefore: func(request *models.ShortenRequest, mock *testutils.Mock) {
+			hookBefore: func(request *models.ShortenRequest, mock *mocks.Mock) {
 				mock.Store.EXPECT().Save(gomock.Any(), request.URL, gomock.Any()).Return("", assert.AnError)
 			},
 		},
@@ -66,7 +66,7 @@ func TestShortenerApp_ShortenURL(t *testing.T) {
 				URL: "foo",
 			},
 			wantError: true,
-			hookBefore: func(request *models.ShortenRequest, mock *testutils.Mock) {
+			hookBefore: func(request *models.ShortenRequest, mock *mocks.Mock) {
 				mock.Store.EXPECT().Save(gomock.Any(), request.URL, gomock.Any()).Return("key", nil)
 			},
 		},
@@ -81,7 +81,7 @@ func TestShortenerApp_ShortenURL(t *testing.T) {
 			response: &models.ShortenResponse{
 				Result: "http://localhost/key",
 			},
-			hookBefore: func(request *models.ShortenRequest, mock *testutils.Mock) {
+			hookBefore: func(request *models.ShortenRequest, mock *mocks.Mock) {
 				mock.Store.EXPECT().Save(gomock.Any(), request.URL, gomock.Any()).Return("key", nil)
 			},
 		},
@@ -91,7 +91,7 @@ func TestShortenerApp_ShortenURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			ctrl := gomock.NewController(t)
-			mock := testutils.NewMock(ctrl)
+			mock := mocks.NewMock(ctrl)
 			tt.hookBefore(tt.request, mock)
 			shortener := NewShortenerApp(mock.Connection, mock.Store, mock.Logger, mock.AppParameters, tt.configuration)
 

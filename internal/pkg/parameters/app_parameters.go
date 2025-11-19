@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aleffnull/shortener/internal/pkg/database"
+	"github.com/aleffnull/shortener/internal/repository"
 )
 
 type AppParameters interface {
@@ -13,32 +13,32 @@ type AppParameters interface {
 }
 
 type appParametersImpl struct {
-	connection     database.Connection
-	jwtSingningKey string
+	connection    repository.Connection
+	jwtSigningKey string
 }
 
 var _ AppParameters = (*appParametersImpl)(nil)
 
-func NewAppParameters(connection database.Connection) AppParameters {
+func NewAppParameters(connection repository.Connection) AppParameters {
 	return &appParametersImpl{
 		connection: connection,
 	}
 }
 
 func (i *appParametersImpl) Init(ctx context.Context) error {
-	var jwtSingningKey string
+	var jwtSigningKey string
 	err := i.connection.QueryRow(
 		ctx,
-		&jwtSingningKey,
+		&jwtSigningKey,
 		"select value_str from app_parameters where id = 'jwt_signing_key'")
 	if err != nil {
 		return fmt.Errorf("appParametersImpl.Init, connection.QueryRow failed: %w", err)
 	}
 
-	i.jwtSingningKey = jwtSingningKey
+	i.jwtSigningKey = jwtSigningKey
 	return nil
 }
 
 func (i *appParametersImpl) GetJWTSigningKey() string {
-	return i.jwtSingningKey
+	return i.jwtSigningKey
 }

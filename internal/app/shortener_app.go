@@ -9,19 +9,17 @@ import (
 	"time"
 
 	"github.com/aleffnull/shortener/internal/config"
-	"github.com/aleffnull/shortener/internal/pkg/database"
-	pkg_errors "github.com/aleffnull/shortener/internal/pkg/errors"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
-	pkg_models "github.com/aleffnull/shortener/internal/pkg/models"
 	"github.com/aleffnull/shortener/internal/pkg/parameters"
 	"github.com/aleffnull/shortener/internal/pkg/store"
+	"github.com/aleffnull/shortener/internal/repository"
 	"github.com/aleffnull/shortener/models"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 )
 
 type ShortenerApp struct {
-	connection        database.Connection
+	connection        repository.Connection
 	storage           store.Store
 	logger            logger.Logger
 	parameters        parameters.AppParameters
@@ -38,7 +36,7 @@ type deleteURLsRequest struct {
 var _ App = (*ShortenerApp)(nil)
 
 func NewShortenerApp(
-	connection database.Connection,
+	connection repository.Connection,
 	storage store.Store,
 	logger logger.Logger,
 	parameters parameters.AppParameters,
@@ -124,7 +122,7 @@ func (s *ShortenerApp) ShortenURL(ctx context.Context, request *models.ShortenRe
 
 	isDuplicate := false
 	if err != nil {
-		var duplicateURLError *pkg_errors.DuplicateURLError
+		var duplicateURLError *store.DuplicateURLError
 		if errors.As(err, &duplicateURLError) {
 			s.logger.Infof("Duplicate error: %v", duplicateURLError)
 			key = duplicateURLError.Key
@@ -150,8 +148,8 @@ func (s *ShortenerApp) ShortenURLBatch(ctx context.Context, requestItems []*mode
 		return []*models.ShortenBatchResponseItem{}, nil
 	}
 
-	requestModels := lo.Map(requestItems, func(item *models.ShortenBatchRequestItem, _ int) *pkg_models.BatchRequestItem {
-		return &pkg_models.BatchRequestItem{
+	requestModels := lo.Map(requestItems, func(item *models.ShortenBatchRequestItem, _ int) *store.BatchRequestItem {
+		return &store.BatchRequestItem{
 			CorelationID: item.CorelationID,
 			OriginalURL:  item.OriginalURL,
 		}

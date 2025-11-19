@@ -13,10 +13,172 @@ import (
 	context "context"
 	reflect "reflect"
 
-	models "github.com/aleffnull/shortener/internal/pkg/models"
+	store "github.com/aleffnull/shortener/internal/pkg/store"
 	uuid "github.com/google/uuid"
 	gomock "go.uber.org/mock/gomock"
 )
+
+// MockStoreManager is a mock of StoreManager interface.
+type MockStoreManager struct {
+	ctrl     *gomock.Controller
+	recorder *MockStoreManagerMockRecorder
+	isgomock struct{}
+}
+
+// MockStoreManagerMockRecorder is the mock recorder for MockStoreManager.
+type MockStoreManagerMockRecorder struct {
+	mock *MockStoreManager
+}
+
+// NewMockStoreManager creates a new mock instance.
+func NewMockStoreManager(ctrl *gomock.Controller) *MockStoreManager {
+	mock := &MockStoreManager{ctrl: ctrl}
+	mock.recorder = &MockStoreManagerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockStoreManager) EXPECT() *MockStoreManagerMockRecorder {
+	return m.recorder
+}
+
+// CheckAvailability mocks base method.
+func (m *MockStoreManager) CheckAvailability(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckAvailability", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckAvailability indicates an expected call of CheckAvailability.
+func (mr *MockStoreManagerMockRecorder) CheckAvailability(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAvailability", reflect.TypeOf((*MockStoreManager)(nil).CheckAvailability), arg0)
+}
+
+// Init mocks base method.
+func (m *MockStoreManager) Init() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Init")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Init indicates an expected call of Init.
+func (mr *MockStoreManagerMockRecorder) Init() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockStoreManager)(nil).Init))
+}
+
+// Shutdown mocks base method.
+func (m *MockStoreManager) Shutdown() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Shutdown")
+}
+
+// Shutdown indicates an expected call of Shutdown.
+func (mr *MockStoreManagerMockRecorder) Shutdown() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Shutdown", reflect.TypeOf((*MockStoreManager)(nil).Shutdown))
+}
+
+// MockDataStore is a mock of DataStore interface.
+type MockDataStore struct {
+	ctrl     *gomock.Controller
+	recorder *MockDataStoreMockRecorder
+	isgomock struct{}
+}
+
+// MockDataStoreMockRecorder is the mock recorder for MockDataStore.
+type MockDataStoreMockRecorder struct {
+	mock *MockDataStore
+}
+
+// NewMockDataStore creates a new mock instance.
+func NewMockDataStore(ctrl *gomock.Controller) *MockDataStore {
+	mock := &MockDataStore{ctrl: ctrl}
+	mock.recorder = &MockDataStoreMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDataStore) EXPECT() *MockDataStoreMockRecorder {
+	return m.recorder
+}
+
+// DeleteBatch mocks base method.
+func (m *MockDataStore) DeleteBatch(arg0 context.Context, arg1 []string, arg2 uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteBatch", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteBatch indicates an expected call of DeleteBatch.
+func (mr *MockDataStoreMockRecorder) DeleteBatch(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBatch", reflect.TypeOf((*MockDataStore)(nil).DeleteBatch), arg0, arg1, arg2)
+}
+
+// Load mocks base method.
+func (m *MockDataStore) Load(arg0 context.Context, arg1 string) (*store.URLItem, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Load", arg0, arg1)
+	ret0, _ := ret[0].(*store.URLItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Load indicates an expected call of Load.
+func (mr *MockDataStoreMockRecorder) Load(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockDataStore)(nil).Load), arg0, arg1)
+}
+
+// LoadAllByUserID mocks base method.
+func (m *MockDataStore) LoadAllByUserID(arg0 context.Context, arg1 uuid.UUID) ([]*store.KeyOriginalURLItem, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoadAllByUserID", arg0, arg1)
+	ret0, _ := ret[0].([]*store.KeyOriginalURLItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LoadAllByUserID indicates an expected call of LoadAllByUserID.
+func (mr *MockDataStoreMockRecorder) LoadAllByUserID(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadAllByUserID", reflect.TypeOf((*MockDataStore)(nil).LoadAllByUserID), arg0, arg1)
+}
+
+// Save mocks base method.
+func (m *MockDataStore) Save(arg0 context.Context, arg1 string, arg2 uuid.UUID) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Save", arg0, arg1, arg2)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Save indicates an expected call of Save.
+func (mr *MockDataStoreMockRecorder) Save(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockDataStore)(nil).Save), arg0, arg1, arg2)
+}
+
+// SaveBatch mocks base method.
+func (m *MockDataStore) SaveBatch(arg0 context.Context, arg1 []*store.BatchRequestItem, arg2 uuid.UUID) ([]*store.BatchResponseItem, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveBatch", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]*store.BatchResponseItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SaveBatch indicates an expected call of SaveBatch.
+func (mr *MockDataStoreMockRecorder) SaveBatch(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveBatch", reflect.TypeOf((*MockDataStore)(nil).SaveBatch), arg0, arg1, arg2)
+}
 
 // MockStore is a mock of Store interface.
 type MockStore struct {
@@ -85,10 +247,10 @@ func (mr *MockStoreMockRecorder) Init() *gomock.Call {
 }
 
 // Load mocks base method.
-func (m *MockStore) Load(arg0 context.Context, arg1 string) (*models.URLItem, error) {
+func (m *MockStore) Load(arg0 context.Context, arg1 string) (*store.URLItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Load", arg0, arg1)
-	ret0, _ := ret[0].(*models.URLItem)
+	ret0, _ := ret[0].(*store.URLItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -100,10 +262,10 @@ func (mr *MockStoreMockRecorder) Load(arg0, arg1 any) *gomock.Call {
 }
 
 // LoadAllByUserID mocks base method.
-func (m *MockStore) LoadAllByUserID(arg0 context.Context, arg1 uuid.UUID) ([]*models.KeyOriginalURLItem, error) {
+func (m *MockStore) LoadAllByUserID(arg0 context.Context, arg1 uuid.UUID) ([]*store.KeyOriginalURLItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LoadAllByUserID", arg0, arg1)
-	ret0, _ := ret[0].([]*models.KeyOriginalURLItem)
+	ret0, _ := ret[0].([]*store.KeyOriginalURLItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -130,10 +292,10 @@ func (mr *MockStoreMockRecorder) Save(arg0, arg1, arg2 any) *gomock.Call {
 }
 
 // SaveBatch mocks base method.
-func (m *MockStore) SaveBatch(arg0 context.Context, arg1 []*models.BatchRequestItem, arg2 uuid.UUID) ([]*models.BatchResponseItem, error) {
+func (m *MockStore) SaveBatch(arg0 context.Context, arg1 []*store.BatchRequestItem, arg2 uuid.UUID) ([]*store.BatchResponseItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SaveBatch", arg0, arg1, arg2)
-	ret0, _ := ret[0].([]*models.BatchResponseItem)
+	ret0, _ := ret[0].([]*store.BatchResponseItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -181,10 +343,10 @@ func (m *MockColdStore) EXPECT() *MockColdStoreMockRecorder {
 }
 
 // LoadAll mocks base method.
-func (m *MockColdStore) LoadAll() ([]*models.ColdStoreEntry, error) {
+func (m *MockColdStore) LoadAll() ([]*store.ColdStoreEntry, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LoadAll")
-	ret0, _ := ret[0].([]*models.ColdStoreEntry)
+	ret0, _ := ret[0].([]*store.ColdStoreEntry)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -196,7 +358,7 @@ func (mr *MockColdStoreMockRecorder) LoadAll() *gomock.Call {
 }
 
 // Save mocks base method.
-func (m *MockColdStore) Save(arg0 *models.ColdStoreEntry) error {
+func (m *MockColdStore) Save(arg0 *store.ColdStoreEntry) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Save", arg0)
 	ret0, _ := ret[0].(error)

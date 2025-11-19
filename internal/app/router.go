@@ -3,9 +3,9 @@ package app
 import (
 	"net/http"
 
-	"github.com/aleffnull/shortener/internal/pkg/authorization"
+	"github.com/aleffnull/shortener/internal/middleware"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
-	"github.com/aleffnull/shortener/internal/pkg/middleware"
+	"github.com/aleffnull/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
 	cm "github.com/go-chi/chi/v5/middleware"
 	"github.com/ldez/mimetype"
@@ -15,11 +15,11 @@ const mimetypeApplicationGZIP = "application/x-gzip"
 
 type Router struct {
 	handler              *Handler
-	authorizationService authorization.Service
+	authorizationService service.AuthorizationService
 	logger               logger.Logger
 }
 
-func NewRouter(handler *Handler, authorizationService authorization.Service, logger logger.Logger) *Router {
+func NewRouter(handler *Handler, authorizationService service.AuthorizationService, logger logger.Logger) *Router {
 	return &Router{
 		handler:              handler,
 		authorizationService: authorizationService,

@@ -7,10 +7,8 @@ import (
 	"fmt"
 
 	"github.com/aleffnull/shortener/internal/config"
-	"github.com/aleffnull/shortener/internal/pkg/database"
-	pkg_errors "github.com/aleffnull/shortener/internal/pkg/errors"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
-	"github.com/aleffnull/shortener/internal/pkg/models"
+	"github.com/aleffnull/shortener/internal/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -18,7 +16,7 @@ import (
 
 type DatabaseStore struct {
 	keyStore
-	connection    database.Connection
+	connection    repository.Connection
 	configuration *config.DatabaseStoreConfiguration
 	logger        logger.Logger
 }
@@ -27,7 +25,7 @@ type executorFunc func(ctx context.Context, sql string, args ...any) error
 
 var _ Store = (*DatabaseStore)(nil)
 
-func NewDatabaseStore(connection database.Connection, configuration *config.Configuration, logger logger.Logger) Store {
+func NewDatabaseStore(connection repository.Connection, configuration *config.Configuration, logger logger.Logger) Store {
 	store := &DatabaseStore{
 		keyStore: keyStore{
 			configuration: &configuration.DatabaseStore.KeyStoreConfiguration,
@@ -57,7 +55,7 @@ func (s *DatabaseStore) CheckAvailability(ctx context.Context) error {
 	return nil
 }
 
-func (s *DatabaseStore) Load(ctx context.Context, key string) (*models.URLItem, error) {
+func (s *DatabaseStore) Load(ctx context.Context, key string) (*URLItem, error) {
 	rows, err := s.connection.QueryRows(
 		ctx,
 		"select original_url, is_deleted from urls where url_key = $1",
@@ -69,9 +67,9 @@ func (s *DatabaseStore) Load(ctx context.Context, key string) (*models.URLItem, 
 
 	defer rows.Close()
 
-	var item *models.URLItem
+	var item *URLItem
 	for rows.Next() {
-		item = &models.URLItem{}
+		item = &URLItem{}
 		err = rows.Scan(&item.URL, &item.IsDeleted)
 		if err != nil {
 			return nil, fmt.Errorf("DatabaseStore.Load, rows.Scan failed: %w", err)
@@ -88,7 +86,7 @@ func (s *DatabaseStore) Load(ctx context.Context, key string) (*models.URLItem, 
 	return item, nil
 }
 
-func (s *DatabaseStore) LoadAllByUserID(ctx context.Context, userID uuid.UUID) ([]*models.KeyOriginalURLItem, error) {
+func (s *DatabaseStore) LoadAllByUserID(ctx context.Context, userID uuid.UUID) ([]*KeyOriginalURLItem, error) {
 	rows, err := s.connection.QueryRows(
 		ctx,
 		"select url_key, original_url from urls where user_id = $1",
@@ -100,9 +98,9 @@ func (s *DatabaseStore) LoadAllByUserID(ctx context.Context, userID uuid.UUID) (
 
 	defer rows.Close()
 
-	items := []*models.KeyOriginalURLItem{}
+	items := []*KeyOriginalURLItem{}
 	for rows.Next() {
-		item := &models.KeyOriginalURLItem{}
+		item := &KeyOriginalURLItem{}
 		err = rows.Scan(&item.URLKey, &item.OriginalURL)
 		if err != nil {
 			return nil, fmt.Errorf("DatabaseStore.LoadAllByUserID, rows.Scan failed: %w", err)
@@ -125,7 +123,7 @@ func (s *DatabaseStore) Save(ctx context.Context, value string, userID uuid.UUID
 	})
 
 	if err != nil {
-		var duplicateURLError *pkg_errors.DuplicateURLError
+		var duplicateURLError *DuplicateURLError
 		if errors.As(err, &duplicateURLError) {
 			existingKey, err := s.getExistingKeyByValue(ctx, value)
 			if err != nil {
@@ -141,8 +139,8 @@ func (s *DatabaseStore) Save(ctx context.Context, value string, userID uuid.UUID
 	return key, nil
 }
 
-func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*models.BatchRequestItem, userID uuid.UUID) ([]*models.BatchResponseItem, error) {
-	responseItems := make([]*models.BatchResponseItem, 0, len(requestItems))
+func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*BatchRequestItem, userID uuid.UUID) ([]*BatchResponseItem, error) {
+	responseItems := make([]*BatchResponseItem, 0, len(requestItems))
 	err := s.connection.DoInTx(
 		ctx,
 		func(tx *sql.Tx) error {
@@ -157,7 +155,7 @@ func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*models.Ba
 					return fmt.Errorf("DatabaseStore.SaveBatch, s.saveWithUniqueKey failed: %w", err)
 				}
 
-				responseItems = append(responseItems, &models.BatchResponseItem{
+				responseItems = append(responseItems, &BatchResponseItem{
 					CorelationID: requestItem.CorelationID,
 					Key:          key,
 				})
@@ -198,7 +196,7 @@ func (s *DatabaseStore) saver(ctx context.Context, executor executorFunc, key, v
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
 			if pgErr.ConstraintName == "urls_original_url_unique" {
-				return false, pkg_errors.NewDuplicateURLError("", value)
+				return false, NewDuplicateURLError("", value)
 			}
 			return true, nil
 		}

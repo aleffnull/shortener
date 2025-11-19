@@ -8,11 +8,11 @@ import (
 
 	"github.com/aleffnull/shortener/internal/app"
 	"github.com/aleffnull/shortener/internal/config"
-	"github.com/aleffnull/shortener/internal/pkg/authorization"
-	"github.com/aleffnull/shortener/internal/pkg/database"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/parameters"
 	"github.com/aleffnull/shortener/internal/pkg/store"
+	"github.com/aleffnull/shortener/internal/repository"
+	"github.com/aleffnull/shortener/internal/service"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
@@ -20,7 +20,7 @@ import (
 
 func NewShortenerApp(
 	lc fx.Lifecycle,
-	connection database.Connection,
+	connection repository.Connection,
 	storage store.Store,
 	log logger.Logger,
 	parameters parameters.AppParameters,
@@ -80,11 +80,11 @@ func main() {
 			zap.NewDevelopment,
 			logger.NewZapLogger,
 			config.GetConfiguration,
-			database.NewConnection,
+			repository.NewConnection,
 			store.NewFileStore,
 			store.NewStore,
 			parameters.NewAppParameters,
-			authorization.NewAuthorizationService,
+			service.NewAuthorizationService,
 			NewShortenerApp,
 			app.NewHandler,
 			app.NewRouter,

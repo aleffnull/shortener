@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/aleffnull/shortener/internal/pkg/authorization"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/utils"
+	"github.com/aleffnull/shortener/internal/service"
 	"github.com/google/uuid"
 )
 
@@ -37,7 +37,7 @@ const (
 
 func UserIDHandler(
 	handlerFunc http.HandlerFunc,
-	authorizationService authorization.Service,
+	authorizationService service.AuthorizationService,
 	logger logger.Logger,
 	options UserIDOptions,
 ) http.HandlerFunc {
@@ -82,7 +82,7 @@ func GetUserIDFromContext(ctx context.Context) uuid.UUID {
 	return (value).(uuid.UUID)
 }
 
-func getUserID(request *http.Request, authorizationService authorization.Service) (uuid.UUID, tokenStatus, error) {
+func getUserID(request *http.Request, authorizationService service.AuthorizationService) (uuid.UUID, tokenStatus, error) {
 	cookie, err := request.Cookie(userIDCookieName)
 	if err != nil {
 		if errors.Is(err, http.ErrNoCookie) {
@@ -94,7 +94,7 @@ func getUserID(request *http.Request, authorizationService authorization.Service
 
 	userID, err := authorizationService.GetUserIDFromToken(cookie.Value)
 	if err != nil {
-		if errors.Is(err, authorization.ErrTokenExpired) || errors.Is(err, authorization.ErrTokenInvalid) {
+		if errors.Is(err, service.ErrTokenExpired) || errors.Is(err, service.ErrTokenInvalid) {
 			// Токен просрочился, поэтому невалиден, или сам по себе невалиден.
 			return uuid.UUID{}, tokenStatusInvalid, nil
 		}
@@ -106,7 +106,7 @@ func getUserID(request *http.Request, authorizationService authorization.Service
 	return userID, tokenStatusValid, nil
 }
 
-func setUserID(userID uuid.UUID, response http.ResponseWriter, authorizationService authorization.Service) error {
+func setUserID(userID uuid.UUID, response http.ResponseWriter, authorizationService service.AuthorizationService) error {
 	tokenString, err := authorizationService.CreateToken(userID)
 	if err != nil {
 		return fmt.Errorf("setUserID, token.SignedString failed: %w", err)

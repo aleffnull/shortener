@@ -1,4 +1,4 @@
-package authorization
+package service
 
 import (
 	"errors"
@@ -15,31 +15,26 @@ type Claims struct {
 	UserID uuid.UUID
 }
 
-type Service interface {
+type AuthorizationService interface {
 	CreateToken(uuid.UUID) (string, error)
 	GetUserIDFromToken(string) (uuid.UUID, error)
 }
 
-type serviceImpl struct {
+type authorizationServiceImpl struct {
 	parameters parameters.AppParameters
 }
 
-var _ Service = (*serviceImpl)(nil)
-
-var (
-	ErrTokenExpired = errors.New("token expired")
-	ErrTokenInvalid = errors.New("token is invalid")
-)
+var _ AuthorizationService = (*authorizationServiceImpl)(nil)
 
 const jwtTokenDuration = 24 * time.Hour
 
-func NewAuthorizationService(parameters parameters.AppParameters) Service {
-	return &serviceImpl{
+func NewAuthorizationService(parameters parameters.AppParameters) AuthorizationService {
+	return &authorizationServiceImpl{
 		parameters: parameters,
 	}
 }
 
-func (i *serviceImpl) CreateToken(userID uuid.UUID) (string, error) {
+func (i *authorizationServiceImpl) CreateToken(userID uuid.UUID) (string, error) {
 	token := jwt.NewWithClaims(
 		jwt.SigningMethodHS256,
 		Claims{
@@ -56,7 +51,7 @@ func (i *serviceImpl) CreateToken(userID uuid.UUID) (string, error) {
 	return tokenString, nil
 }
 
-func (i *serviceImpl) GetUserIDFromToken(tokenString string) (uuid.UUID, error) {
+func (i *authorizationServiceImpl) GetUserIDFromToken(tokenString string) (uuid.UUID, error) {
 	token, err := jwt.ParseWithClaims(
 		tokenString,
 		&Claims{},

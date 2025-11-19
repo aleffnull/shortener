@@ -4,9 +4,8 @@ import (
 	"context"
 
 	"github.com/aleffnull/shortener/internal/config"
-	"github.com/aleffnull/shortener/internal/pkg/database"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
-	"github.com/aleffnull/shortener/internal/pkg/models"
+	"github.com/aleffnull/shortener/internal/repository"
 	"github.com/google/uuid"
 )
 
@@ -17,10 +16,10 @@ type StoreManager interface {
 }
 
 type DataStore interface {
-	Load(context.Context, string) (*models.URLItem, error)
-	LoadAllByUserID(context.Context, uuid.UUID) ([]*models.KeyOriginalURLItem, error)
+	Load(context.Context, string) (*URLItem, error)
+	LoadAllByUserID(context.Context, uuid.UUID) ([]*KeyOriginalURLItem, error)
 	Save(context.Context, string, uuid.UUID) (string, error)
-	SaveBatch(context.Context, []*models.BatchRequestItem, uuid.UUID) ([]*models.BatchResponseItem, error)
+	SaveBatch(context.Context, []*BatchRequestItem, uuid.UUID) ([]*BatchResponseItem, error)
 	DeleteBatch(context.Context, []string, uuid.UUID) error
 }
 
@@ -30,12 +29,12 @@ type Store interface {
 }
 
 type ColdStore interface {
-	LoadAll() ([]*models.ColdStoreEntry, error)
-	Save(*models.ColdStoreEntry) error
+	LoadAll() ([]*ColdStoreEntry, error)
+	Save(*ColdStoreEntry) error
 }
 
 func NewStore(
-	connection database.Connection,
+	connection repository.Connection,
 	coldStore ColdStore,
 	configuration *config.Configuration,
 	logger logger.Logger,
