@@ -8,6 +8,7 @@ import (
 
 	"github.com/aleffnull/shortener/internal/app"
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/pkg/audit"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/parameters"
 	"github.com/aleffnull/shortener/internal/pkg/store"
@@ -86,13 +87,19 @@ func main() {
 			parameters.NewAppParameters,
 			service.NewAuthorizationService,
 			NewShortenerApp,
-			app.NewHandler,
 			app.NewRouter,
 			NewHTTPServer,
+			asReceiver(audit.NewFileReceiver),
+			asReceiver(audit.NewEndpointReceiver),
+			fx.Annotate(app.NewHandler, fx.ParamTags("", "", "", `group:"receivers"`)),
 		),
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: log}
 		}),
 		fx.Invoke(func(*http.Server) {}),
 	).Run()
+}
+
+func asReceiver(f any) any {
+	return fx.Annotate(f, fx.As(new(audit.Receiver)), fx.ResultTags(`group:"receivers"`))
 }

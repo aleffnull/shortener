@@ -90,6 +90,7 @@ func (s *ShortenerApp) GetURL(ctx context.Context, key string) (*models.GetURLRe
 
 	return &models.GetURLResponseItem{
 		URL:       item.URL,
+		UserID:    item.UserID,
 		IsDeleted: item.IsDeleted,
 	}, nil
 }

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aleffnull/shortener/internal/pkg/audit"
 	"github.com/aleffnull/shortener/internal/pkg/mocks"
 	"github.com/aleffnull/shortener/models"
 	"github.com/go-http-utils/headers"
@@ -68,7 +69,7 @@ func TestHandler_HandleGetRequest(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, "/foo", nil)
 			ctrl := gomock.NewController(t)
 			mock := mocks.NewMock(ctrl)
-			handler := NewHandler(mock.App, mock.AppParameters, mock.Logger)
+			handler := NewHandler(mock.App, mock.AppParameters, mock.Logger, []audit.Receiver{})
 			tt.hookBefore(tt.key, mock)
 
 			// Act.
@@ -156,7 +157,7 @@ func TestHandler_HandlePostRequest(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.longURL))
 			ctrl := gomock.NewController(t)
 			mock := mocks.NewMock(ctrl)
-			handler := NewHandler(mock.App, mock.AppParameters, mock.Logger)
+			handler := NewHandler(mock.App, mock.AppParameters, mock.Logger, []audit.Receiver{})
 			if tt.hookBefore != nil {
 				tt.hookBefore(tt.longURL, mock)
 			}
@@ -257,7 +258,7 @@ func TestHandler_HandleAPIRequest(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, "/api/shorten", body)
 			ctrl := gomock.NewController(t)
 			mock := mocks.NewMock(ctrl)
-			handler := NewHandler(mock.App, mock.AppParameters, mock.Logger)
+			handler := NewHandler(mock.App, mock.AppParameters, mock.Logger, []audit.Receiver{})
 			if tt.hookBefore != nil {
 				tt.hookBefore(tt.shortenRequest, mock)
 			}
@@ -311,7 +312,7 @@ func TestHandler_HandlePingRequest(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, "/ping", nil)
 			ctrl := gomock.NewController(t)
 			mock := mocks.NewMock(ctrl)
-			handler := NewHandler(mock.App, mock.AppParameters, mock.Logger)
+			handler := NewHandler(mock.App, mock.AppParameters, mock.Logger, []audit.Receiver{})
 			tt.hookBefore(mock)
 
 			// Act.
