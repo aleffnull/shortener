@@ -1,0 +1,77 @@
+DATABASE_DSN=postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable make run
+
+curl http://localhost:8080/ping -X GET -i
+
+curl http://localhost:8080 \
+	-X POST \
+	-H "Content-Type: text/plain; charset=utf-8" \
+	-i \
+	-d "https://practicum.yandex.ru/"
+
+curl http://localhost:8080/BnyjewDP -X GET -i
+
+curl http://localhost:8080/api/user/urls -X GET -i
+
+curl http://localhost:8080/api/user/urls \
+	-X GET \
+	-H "Cookie: X-UserID=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTczNDQxMTMsIlVzZXJJRCI6ImJiM2E1NjA5LWYxZjgtNDYyOC05MDY0LWU4NDBlZTEyMDk4YiJ9.yulPtGFM2NiKaUKsa84eqPI8CTkV_ujqgqXuxqYkhPg;" \
+	-i
+
+curl http://localhost:8080/GVDPUPWl \
+	-X OPTIONS \
+	-i
+
+curl http://localhost:8080/api/shorten \
+	-X POST \
+	-H "Content-Type: application/json; charset=utf-8" \
+	-i \
+	-d "{\"url\": \"https://practicum.yandex.ru/\"}"
+
+curl http://localhost:8080/api/shorten \
+	-X POST \
+	-H "Content-Type: application/json; charset=utf-8" \
+	-H "Cookie: X-UserID=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTM3ODAxMzksIlVzZXJJRCI6Ijg1ZTM2YTlhLTg3NjQtNDA3OC04MGVlLTRjMjhmNTA5MWExMSJ9.O-OUyvitFhTmgOJVq7FXDzY0MJQ3Wbp0pwSacMr2Ip8;" \
+	-i \
+	-d "{\"url\": \"https://ya.ru/\"}"
+
+curl http://localhost:8080/api/shorten/batch \
+	-X POST \
+	-H "Content-Type: application/json; charset=utf-8" \
+	-i \
+	-d "[ \
+		{\"correlation_id\":\"id1\", \"original_url\": \"http://ya.ru\"}, \
+		{\"correlation_id\":\"id2\", \"original_url\": \"http://yandex.ru\"} \
+	]"
+
+echo '{"url": "https://practicum.yandex.ru/"}' | gzip > body.gz
+curl http://localhost:8080/api/shorten \
+	-X POST \
+	-H "Content-Type: application/json; charset=utf-8" \
+	-H "Content-Encoding: gzip" \
+	-i \
+	--data-binary @body.gz
+curl http://localhost:8080/api/shorten \
+	-X POST \
+	-H "Content-Type: application/json; charset=utf-8" \
+	-H "Content-Encoding: gzip" \
+	-H "Accept-Encoding: gzip" \
+	--data-binary @body.gz | gunzip -
+
+curl http://localhost:8080 \
+	-X POST \
+	-H "Content-Type: text/plain; charset=utf-8" \
+	-H "Accept-Encoding: gzip" \
+	-d "https://practicum.yandex.ru/" | gunzip -
+
+curl http://localhost:8080/api/shorten \
+	-X POST \
+	-H "Content-Type: application/json; charset=utf-8" \
+	-H "Accept-Encoding: gzip" \
+	-d "{\"url\": \"https://practicum.yandex.ru/\"}" | gunzip -
+
+curl http://localhost:8080/api/user/urls \
+	-X DELETE \
+	-H "Content-Type: application/json; charset=utf-8" \
+	-H "Cookie: X-UserID=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTczNDU1NzQsIlVzZXJJRCI6Ijg3MzE4YzcyLTFmMTUtNDgyNC1hOTliLTg4MTc5N2U1YjQ2YiJ9.QtKxbAF_UZqefKFdlhlC7HLOWl2qEueW9SuGPmacWa8;" \
+	-i \
+	-d "[\"BnyjewDP\"]"
