@@ -1,0 +1,47 @@
+package audit
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"net/http"
+
+	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/pkg/logger"
+	"github.com/ldez/mimetype"
+)
+
+type EndpointReceiver struct {
+	auditURL string
+	logger   logger.Logger
+}
+
+var _ Receiver = (*EndpointReceiver)(nil)
+
+func NewEndpointReceiver(configuration *config.Configuration, logger logger.Logger) *EndpointReceiver {
+	return &EndpointReceiver{
+		auditURL: configuration.AuditURL,
+		logger:   logger,
+	}
+}
+
+func (r *EndpointReceiver) AddEvent(event *Event) error {
+	if len(r.auditURL) == 0 {
+		return nil
+	}
+
+	data, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("EndpointReceiver.AddEvent, json.Marshal failed: %w", err)
+	}
+
+	response, err := http.Post(r.auditURL, mimetype.ApplicationJSON, bytes.NewBuffer(data))
+	if err != nil {
+		return fmt.Errorf("EndpointReceiver.AddEvent, http.Post failed: %w", err)
+	}
+
+	defer response.Body.Close()
+	r.logger.Infof("Audit endpoint response status code: %v", response.StatusCode)
+
+	return nil
+}

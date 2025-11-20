@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/aleffnull/shortener/internal/middleware"
+	"github.com/aleffnull/shortener/internal/pkg/audit"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/parameters"
 	"github.com/aleffnull/shortener/internal/pkg/utils"
@@ -19,16 +21,23 @@ import (
 )
 
 type Handler struct {
-	shortener  App
-	parameters parameters.AppParameters
-	logger     logger.Logger
+	shortener      App
+	parameters     parameters.AppParameters
+	logger         logger.Logger
+	auditReceivers []audit.Receiver
 }
 
-func NewHandler(shortener App, parameters parameters.AppParameters, logger logger.Logger) *Handler {
+func NewHandler(
+	shortener App,
+	parameters parameters.AppParameters,
+	logger logger.Logger,
+	auditReceivers []audit.Receiver,
+) *Handler {
 	return &Handler{
-		shortener:  shortener,
-		parameters: parameters,
-		logger:     logger,
+		shortener:      shortener,
+		parameters:     parameters,
+		logger:         logger,
+		auditReceivers: auditReceivers,
 	}
 }
 
@@ -50,6 +59,13 @@ func (h *Handler) HandleGetRequest(response http.ResponseWriter, request *http.R
 
 	response.Header().Set(headers.Location, item.URL)
 	response.WriteHeader(http.StatusTemporaryRedirect)
+
+	h.notifyAudit(&audit.Event{
+		Timestamp: audit.FormattedTime(time.Now()),
+		Action:    audit.ActionFollow,
+		UserID:    item.UserID,
+		URL:       item.URL,
+	})
 }
 
 func (h *Handler) HandleGetUserURLsRequest(response http.ResponseWriter, request *http.Request) {
@@ -102,6 +118,15 @@ func (h *Handler) HandlePostRequest(response http.ResponseWriter, request *http.
 	response.Header().Set(headers.ContentType, mimetype.TextPlain)
 	response.WriteHeader(lo.Ternary(shortenerResponse.IsDuplicate, http.StatusConflict, http.StatusCreated))
 	fmt.Fprint(response, shortenerResponse.Result)
+
+	if !shortenerResponse.IsDuplicate {
+		h.notifyAudit(&audit.Event{
+			Timestamp: audit.FormattedTime(time.Now()),
+			Action:    audit.ActionShorten,
+			UserID:    userID,
+			URL:       longURL,
+		})
+	}
 }
 
 func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.Request) {
@@ -131,6 +156,15 @@ func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.R
 	if err = json.NewEncoder(response).Encode(shortenerResponse); err != nil {
 		utils.HandleServerError(response, err, h.logger)
 		return
+	}
+
+	if !shortenerResponse.IsDuplicate {
+		h.notifyAudit(&audit.Event{
+			Timestamp: audit.FormattedTime(time.Now()),
+			Action:    audit.ActionShorten,
+			UserID:    userID,
+			URL:       shortenRequest.URL,
+		})
 	}
 }
 
@@ -186,4 +220,12 @@ func (h *Handler) HandlePingRequest(response http.ResponseWriter, request *http.
 	}
 
 	response.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) notifyAudit(event *audit.Event) {
+	for _, receiver := range h.auditReceivers {
+		if err := receiver.AddEvent(event); err != nil {
+			h.logger.Errorf("Audit error: %v", err)
+		}
+	}
 }
