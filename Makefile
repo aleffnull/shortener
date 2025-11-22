@@ -44,3 +44,6 @@ autotest: build
 	$(TEST_EXE) -test.v -test.run=^TestIteration15$$ -binary-path=$(EXE) -database-dsn=$(DATABASE_CONN_STRING)
 
 test: unittest statictest autotest
+
+bench:
+	go test -bench=. ./...
