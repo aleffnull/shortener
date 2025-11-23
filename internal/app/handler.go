@@ -42,13 +42,18 @@ func NewHandler(
 }
 
 func (h *Handler) HandleGetRequest(response http.ResponseWriter, request *http.Request, key string) {
+	if key == "favicon.ico" {
+		response.WriteHeader(http.StatusNotFound)
+		return
+	}
+
 	item, err := h.shortener.GetURL(request.Context(), key)
 	if err != nil {
 		utils.HandleServerError(response, err, h.logger)
 		return
 	}
 	if item == nil {
-		utils.HandleRequestError(response, errors.New("key was not found"), h.logger)
+		utils.HandleRequestError(response, fmt.Errorf("key was not found: '%v'", key), h.logger)
 		return
 	}
 

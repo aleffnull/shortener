@@ -17,7 +17,7 @@ func BenchmarkRandomString(b *testing.B) {
 
 	b.Run("by concatenation", func(b *testing.B) {
 		for b.Loop() {
-			_ = randomStringByConcat(length)
+			_ = randomStringByConcatenation(length)
 		}
 	})
 
@@ -37,7 +37,7 @@ func randomStringByBuffer(length int) string {
 	return string(arr)
 }
 
-func randomStringByConcat(length int) string {
+func randomStringByConcatenation(length int) string {
 	result := ""
 	for range length {
 		result += string(alphabet[rand.IntN(len(alphabet))])

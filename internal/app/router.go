@@ -2,6 +2,7 @@ package app
 
 import (
 	"net/http"
+	"net/http/pprof"
 
 	"github.com/aleffnull/shortener/internal/middleware"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
@@ -103,6 +104,14 @@ func (r *Router) NewMuxHandler() http.Handler {
 				r.logger,
 				middleware.UserIDOptionsNone),
 			r.logger))
+
+	mux.Route("/debug/pprof", func(r chi.Router) {
+		r.Get("/cmdline", pprof.Cmdline)
+		r.Get("/profile", pprof.Profile)
+		r.Get("/symbol", pprof.Symbol)
+		r.Get("/trace", pprof.Trace)
+		r.Get("/*", pprof.Index)
+	})
 
 	return mux
 }

@@ -1,4 +1,5 @@
 DATABASE_DSN=postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable make run
+DATABASE_DSN=postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable CPU_PROFILE=profiles/cpu.pprof MEMORY_PROFILE=profiles/memory.pprof make run
 
 curl http://localhost:8080/ping -X GET -i
 

@@ -17,6 +17,11 @@ func LogHandler(handlerFunc http.HandlerFunc, logger logger.Logger) http.Handler
 		handlerFunc(responseWriter, request)
 		duration := time.Since(startTime)
 
+		status := responseWriter.GetStatus()
+		if status == http.StatusCreated || status == http.StatusOK {
+			return
+		}
+
 		sb := &strings.Builder{}
 
 		fmt.Fprintf(

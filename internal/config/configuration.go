@@ -18,6 +18,8 @@ type Configuration struct {
 	MemoryStore   *MemoryStoreConfiguration   `validate:"required"`
 	FileStore     *FileStoreConfiguration     `validate:"required"`
 	DatabaseStore *DatabaseStoreConfiguration `validate:"required"`
+	CPUProfile    string                      `env:"CPU_PROFILE" validate:"omitempty,filepath"`
+	MemoryProfile string                      `env:"MEMORY_PROFILE" validate:"omitempty,filepath"`
 }
 
 func (c *Configuration) String() string {
@@ -34,6 +36,14 @@ func (c *Configuration) String() string {
 
 	if len(c.AuditURL) > 0 {
 		fmt.Fprintf(sb, " AuditURL:%v", c.AuditURL)
+	}
+
+	if len(c.CPUProfile) > 0 {
+		fmt.Fprintf(sb, " CPUProfile:%v", c.CPUProfile)
+	}
+
+	if len(c.MemoryProfile) > 0 {
+		fmt.Fprintf(sb, " MemoryProfile:%v", c.MemoryProfile)
 	}
 
 	if c.MemoryStore == nil {
@@ -86,6 +96,8 @@ func GetConfiguration() (*Configuration, error) {
 			envConfig.DatabaseStore.DataSourceName,
 			flagConfig.DatabaseStore.DataSourceName,
 		)),
+		CPUProfile:    lo.Ternary(len(envConfig.CPUProfile) > 0, envConfig.CPUProfile, flagConfig.CPUProfile),
+		MemoryProfile: lo.Ternary(len(envConfig.MemoryProfile) > 0, envConfig.MemoryProfile, flagConfig.MemoryProfile),
 	}
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	err = validate.Struct(configuration)
@@ -108,6 +120,8 @@ func parseFlags() (*Configuration, error) {
 	flag.StringVar(&configuration.AuditURL, "audit-url", "", "audit endpoint URL")
 	flag.StringVar(&configuration.FileStore.FilePath, "f", "shortener.jsonl", "path to storage file")
 	flag.StringVar(&configuration.DatabaseStore.DataSourceName, "d", "", "data source name")
+	flag.StringVar(&configuration.CPUProfile, "cpu-profile", "", "path to CPU profile file")
+	flag.StringVar(&configuration.MemoryProfile, "memory-profile", "", "path to memory profile file")
 	flag.Parse()
 
 	return configuration, nil
