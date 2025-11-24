@@ -10,6 +10,10 @@ import (
 	"runtime"
 	"runtime/pprof"
 
+	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
+	"go.uber.org/zap"
+
 	"github.com/aleffnull/shortener/internal/app"
 	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/pkg/audit"
@@ -18,9 +22,6 @@ import (
 	"github.com/aleffnull/shortener/internal/pkg/store"
 	"github.com/aleffnull/shortener/internal/repository"
 	"github.com/aleffnull/shortener/internal/service"
-	"go.uber.org/fx"
-	"go.uber.org/fx/fxevent"
-	"go.uber.org/zap"
 )
 
 func NewShortenerApp(

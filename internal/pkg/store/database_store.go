@@ -6,12 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aleffnull/shortener/internal/config"
-	"github.com/aleffnull/shortener/internal/pkg/logger"
-	"github.com/aleffnull/shortener/internal/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/pkg/logger"
+	"github.com/aleffnull/shortener/internal/repository"
 )
 
 type DatabaseStore struct {

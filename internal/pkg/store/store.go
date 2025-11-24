@@ -3,10 +3,11 @@ package store
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/repository"
-	"github.com/google/uuid"
 )
 
 type StoreManager interface {

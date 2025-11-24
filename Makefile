@@ -47,3 +47,6 @@ test: unittest statictest autotest
 
 bench:
 	go test -bench=. ./...
+
+format:
+	find . -name \*.go -exec goimports -v -local "github.com/aleffnull/shortener" -w {} \;

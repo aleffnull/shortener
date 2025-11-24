@@ -8,16 +8,17 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-http-utils/headers"
+	"github.com/go-playground/validator/v10"
+	"github.com/ldez/mimetype"
+	"github.com/samber/lo"
+
 	"github.com/aleffnull/shortener/internal/middleware"
 	"github.com/aleffnull/shortener/internal/pkg/audit"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/parameters"
 	"github.com/aleffnull/shortener/internal/pkg/utils"
 	"github.com/aleffnull/shortener/models"
-	"github.com/go-http-utils/headers"
-	"github.com/go-playground/validator/v10"
-	"github.com/ldez/mimetype"
-	"github.com/samber/lo"
 )
 
 type Handler struct {

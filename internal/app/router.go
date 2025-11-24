@@ -4,12 +4,13 @@ import (
 	"net/http"
 	"net/http/pprof"
 
-	"github.com/aleffnull/shortener/internal/middleware"
-	"github.com/aleffnull/shortener/internal/pkg/logger"
-	"github.com/aleffnull/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
 	cm "github.com/go-chi/chi/v5/middleware"
 	"github.com/ldez/mimetype"
+
+	"github.com/aleffnull/shortener/internal/middleware"
+	"github.com/aleffnull/shortener/internal/pkg/logger"
+	"github.com/aleffnull/shortener/internal/service"
 )
 
 const mimetypeApplicationGZIP = "application/x-gzip"

@@ -8,14 +8,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/samber/lo"
+
 	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/parameters"
 	"github.com/aleffnull/shortener/internal/pkg/store"
 	"github.com/aleffnull/shortener/internal/repository"
 	"github.com/aleffnull/shortener/models"
-	"github.com/google/uuid"
-	"github.com/samber/lo"
 )
 
 type ShortenerApp struct {

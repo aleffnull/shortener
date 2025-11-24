@@ -10,13 +10,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aleffnull/shortener/internal/pkg/audit"
-	"github.com/aleffnull/shortener/internal/pkg/mocks"
-	"github.com/aleffnull/shortener/models"
 	"github.com/go-http-utils/headers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+
+	"github.com/aleffnull/shortener/internal/pkg/audit"
+	"github.com/aleffnull/shortener/internal/pkg/mocks"
+	"github.com/aleffnull/shortener/models"
 )
 
 func TestHandler_HandleGetRequest(t *testing.T) {

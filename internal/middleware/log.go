@@ -6,8 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/go-http-utils/headers"
+
+	"github.com/aleffnull/shortener/internal/pkg/logger"
 )
 
 func LogHandler(handlerFunc http.HandlerFunc, logger logger.Logger) http.HandlerFunc {

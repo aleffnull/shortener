@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ldez/mimetype"
+
 	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
-	"github.com/ldez/mimetype"
 )
 
 type EndpointReceiver struct {
