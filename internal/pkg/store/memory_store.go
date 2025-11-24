@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/google/uuid"
+
 	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
-	"github.com/google/uuid"
 )
 
 type MemoryStore struct {

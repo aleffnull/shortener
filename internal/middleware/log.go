@@ -6,8 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/go-http-utils/headers"
+
+	"github.com/aleffnull/shortener/internal/pkg/logger"
 )
 
 func LogHandler(handlerFunc http.HandlerFunc, logger logger.Logger) http.HandlerFunc {
@@ -16,6 +17,11 @@ func LogHandler(handlerFunc http.HandlerFunc, logger logger.Logger) http.Handler
 		responseWriter := NewResponseWriter(writer)
 		handlerFunc(responseWriter, request)
 		duration := time.Since(startTime)
+
+		status := responseWriter.GetStatus()
+		if status == http.StatusCreated || status == http.StatusOK {
+			return
+		}
 
 		sb := &strings.Builder{}
 

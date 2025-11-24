@@ -42,3 +42,7 @@ git fetch template && git checkout template/v2 .github
 - **Clean Architecture**
 - **Hexagonal Architecture**
 - **Layered Architecture**
+
+## Оптимизация
+
+Повышено быстродействие и снижено потребление памяти с помощью изменения подхода к логированию запросов к серверу: успешные запросы не логируются.

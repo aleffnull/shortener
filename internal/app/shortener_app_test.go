@@ -4,14 +4,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aleffnull/shortener/internal/config"
-	"github.com/aleffnull/shortener/internal/pkg/mocks"
-	"github.com/aleffnull/shortener/internal/pkg/store"
-	"github.com/aleffnull/shortener/models"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+
+	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/pkg/mocks"
+	"github.com/aleffnull/shortener/internal/pkg/store"
+	"github.com/aleffnull/shortener/models"
 )
 
 func TestShortenerApp_GetURL(t *testing.T) {

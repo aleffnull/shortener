@@ -2,13 +2,15 @@ package app
 
 import (
 	"net/http"
+	"net/http/pprof"
+
+	"github.com/go-chi/chi/v5"
+	cm "github.com/go-chi/chi/v5/middleware"
+	"github.com/ldez/mimetype"
 
 	"github.com/aleffnull/shortener/internal/middleware"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/service"
-	"github.com/go-chi/chi/v5"
-	cm "github.com/go-chi/chi/v5/middleware"
-	"github.com/ldez/mimetype"
 )
 
 const mimetypeApplicationGZIP = "application/x-gzip"
@@ -103,6 +105,14 @@ func (r *Router) NewMuxHandler() http.Handler {
 				r.logger,
 				middleware.UserIDOptionsNone),
 			r.logger))
+
+	mux.Route("/debug/pprof", func(r chi.Router) {
+		r.Get("/cmdline", pprof.Cmdline)
+		r.Get("/profile", pprof.Profile)
+		r.Get("/symbol", pprof.Symbol)
+		r.Get("/trace", pprof.Trace)
+		r.Get("/*", pprof.Index)
+	})
 
 	return mux
 }

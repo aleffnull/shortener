@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aleffnull/shortener/internal/pkg/parameters"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+
+	"github.com/aleffnull/shortener/internal/pkg/parameters"
 )
 
 type Claims struct {

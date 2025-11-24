@@ -6,12 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aleffnull/shortener/internal/config"
-	"github.com/aleffnull/shortener/internal/pkg/logger"
-	"github.com/aleffnull/shortener/internal/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/pkg/logger"
+	"github.com/aleffnull/shortener/internal/repository"
 )
 
 type DatabaseStore struct {
@@ -58,7 +59,7 @@ func (s *DatabaseStore) CheckAvailability(ctx context.Context) error {
 func (s *DatabaseStore) Load(ctx context.Context, key string) (*URLItem, error) {
 	rows, err := s.connection.QueryRows(
 		ctx,
-		"select original_url, is_deleted from urls where url_key = $1",
+		"select original_url, user_id, is_deleted from urls where url_key = $1",
 		key,
 	)
 	if err != nil {
@@ -70,7 +71,7 @@ func (s *DatabaseStore) Load(ctx context.Context, key string) (*URLItem, error) 
 	var item *URLItem
 	for rows.Next() {
 		item = &URLItem{}
-		err = rows.Scan(&item.URL, &item.IsDeleted)
+		err = rows.Scan(&item.URL, &item.UserID, &item.IsDeleted)
 		if err != nil {
 			return nil, fmt.Errorf("DatabaseStore.Load, rows.Scan failed: %w", err)
 		}

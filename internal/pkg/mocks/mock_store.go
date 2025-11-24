@@ -13,9 +13,10 @@ import (
 	context "context"
 	reflect "reflect"
 
-	store "github.com/aleffnull/shortener/internal/pkg/store"
 	uuid "github.com/google/uuid"
 	gomock "go.uber.org/mock/gomock"
+
+	store "github.com/aleffnull/shortener/internal/pkg/store"
 )
 
 // MockStoreManager is a mock of StoreManager interface.
