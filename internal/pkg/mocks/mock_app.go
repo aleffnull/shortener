@@ -13,10 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
+	models "github.com/aleffnull/shortener/models"
 	uuid "github.com/google/uuid"
 	gomock "go.uber.org/mock/gomock"
-
-	models "github.com/aleffnull/shortener/models"
 )
 
 // MockApp is a mock of App interface.

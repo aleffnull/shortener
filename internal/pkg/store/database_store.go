@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/domain"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/repository"
 )
@@ -56,7 +57,7 @@ func (s *DatabaseStore) CheckAvailability(ctx context.Context) error {
 	return nil
 }
 
-func (s *DatabaseStore) Load(ctx context.Context, key string) (*URLItem, error) {
+func (s *DatabaseStore) Load(ctx context.Context, key string) (*domain.URLItem, error) {
 	rows, err := s.connection.QueryRows(
 		ctx,
 		"select original_url, user_id, is_deleted from urls where url_key = $1",
@@ -68,9 +69,9 @@ func (s *DatabaseStore) Load(ctx context.Context, key string) (*URLItem, error) 
 
 	defer rows.Close()
 
-	var item *URLItem
+	var item *domain.URLItem
 	for rows.Next() {
-		item = &URLItem{}
+		item = &domain.URLItem{}
 		err = rows.Scan(&item.URL, &item.UserID, &item.IsDeleted)
 		if err != nil {
 			return nil, fmt.Errorf("DatabaseStore.Load, rows.Scan failed: %w", err)
@@ -87,7 +88,7 @@ func (s *DatabaseStore) Load(ctx context.Context, key string) (*URLItem, error) 
 	return item, nil
 }
 
-func (s *DatabaseStore) LoadAllByUserID(ctx context.Context, userID uuid.UUID) ([]*KeyOriginalURLItem, error) {
+func (s *DatabaseStore) LoadAllByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.KeyOriginalURLItem, error) {
 	rows, err := s.connection.QueryRows(
 		ctx,
 		"select url_key, original_url from urls where user_id = $1",
@@ -99,9 +100,9 @@ func (s *DatabaseStore) LoadAllByUserID(ctx context.Context, userID uuid.UUID) (
 
 	defer rows.Close()
 
-	items := []*KeyOriginalURLItem{}
+	items := []*domain.KeyOriginalURLItem{}
 	for rows.Next() {
-		item := &KeyOriginalURLItem{}
+		item := &domain.KeyOriginalURLItem{}
 		err = rows.Scan(&item.URLKey, &item.OriginalURL)
 		if err != nil {
 			return nil, fmt.Errorf("DatabaseStore.LoadAllByUserID, rows.Scan failed: %w", err)
@@ -140,8 +141,8 @@ func (s *DatabaseStore) Save(ctx context.Context, value string, userID uuid.UUID
 	return key, nil
 }
 
-func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*BatchRequestItem, userID uuid.UUID) ([]*BatchResponseItem, error) {
-	responseItems := make([]*BatchResponseItem, 0, len(requestItems))
+func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*domain.BatchRequestItem, userID uuid.UUID) ([]*domain.BatchResponseItem, error) {
+	responseItems := make([]*domain.BatchResponseItem, 0, len(requestItems))
 	err := s.connection.DoInTx(
 		ctx,
 		func(tx *sql.Tx) error {
@@ -156,7 +157,7 @@ func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*BatchRequ
 					return fmt.Errorf("DatabaseStore.SaveBatch, s.saveWithUniqueKey failed: %w", err)
 				}
 
-				responseItems = append(responseItems, &BatchResponseItem{
+				responseItems = append(responseItems, &domain.BatchResponseItem{
 					CorelationID: requestItem.CorelationID,
 					Key:          key,
 				})

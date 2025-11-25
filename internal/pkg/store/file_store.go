@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/domain"
 )
 
 type FileStore struct {
@@ -24,12 +25,12 @@ func NewFileStore(configuration *config.Configuration) ColdStore {
 	}
 }
 
-func (s *FileStore) LoadAll() ([]*ColdStoreEntry, error) {
+func (s *FileStore) LoadAll() ([]*domain.ColdStoreEntry, error) {
 	// Called only during startup, so no need for mutex locking.
 
 	if _, err := os.Stat(s.configuration.FilePath); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return []*ColdStoreEntry{}, nil
+			return []*domain.ColdStoreEntry{}, nil
 		} else {
 			return nil, fmt.Errorf("LoadAll, os.Stat failed: %w", err)
 		}
@@ -42,11 +43,11 @@ func (s *FileStore) LoadAll() ([]*ColdStoreEntry, error) {
 
 	defer file.Close()
 
-	entries := []*ColdStoreEntry{}
+	entries := []*domain.ColdStoreEntry{}
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		entry := &ColdStoreEntry{}
+		entry := &domain.ColdStoreEntry{}
 		if err := json.Unmarshal(data, entry); err != nil {
 			return nil, fmt.Errorf("LoadAll, json.Unmarshal failed: %w", err)
 		}
@@ -61,7 +62,7 @@ func (s *FileStore) LoadAll() ([]*ColdStoreEntry, error) {
 	return entries, nil
 }
 
-func (s *FileStore) Save(entry *ColdStoreEntry) error {
+func (s *FileStore) Save(entry *domain.ColdStoreEntry) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 

@@ -12,6 +12,7 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/domain"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/parameters"
 	"github.com/aleffnull/shortener/internal/pkg/store"
@@ -150,8 +151,8 @@ func (s *ShortenerApp) ShortenURLBatch(ctx context.Context, requestItems []*mode
 		return []*models.ShortenBatchResponseItem{}, nil
 	}
 
-	requestModels := lo.Map(requestItems, func(item *models.ShortenBatchRequestItem, _ int) *store.BatchRequestItem {
-		return &store.BatchRequestItem{
+	requestModels := lo.Map(requestItems, func(item *models.ShortenBatchRequestItem, _ int) *domain.BatchRequestItem {
+		return &domain.BatchRequestItem{
 			CorelationID: item.CorelationID,
 			OriginalURL:  item.OriginalURL,
 		}

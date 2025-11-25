@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/domain"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 )
 
@@ -64,7 +65,7 @@ func (s *MemoryStore) CheckAvailability(context.Context) error {
 	return nil
 }
 
-func (s *MemoryStore) Load(_ context.Context, key string) (*URLItem, error) {
+func (s *MemoryStore) Load(_ context.Context, key string) (*domain.URLItem, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -73,12 +74,12 @@ func (s *MemoryStore) Load(_ context.Context, key string) (*URLItem, error) {
 		return nil, nil
 	}
 
-	return &URLItem{
+	return &domain.URLItem{
 		URL: value,
 	}, nil
 }
 
-func (s *MemoryStore) LoadAllByUserID(context.Context, uuid.UUID) ([]*KeyOriginalURLItem, error) {
+func (s *MemoryStore) LoadAllByUserID(context.Context, uuid.UUID) ([]*domain.KeyOriginalURLItem, error) {
 	return nil, nil
 }
 
@@ -89,18 +90,18 @@ func (s *MemoryStore) Save(ctx context.Context, value string, _ uuid.UUID) (stri
 	return s.saveValue(ctx, value)
 }
 
-func (s *MemoryStore) SaveBatch(ctx context.Context, requestItems []*BatchRequestItem, _ uuid.UUID) ([]*BatchResponseItem, error) {
+func (s *MemoryStore) SaveBatch(ctx context.Context, requestItems []*domain.BatchRequestItem, _ uuid.UUID) ([]*domain.BatchResponseItem, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	responseItems := make([]*BatchResponseItem, 0, len(requestItems))
+	responseItems := make([]*domain.BatchResponseItem, 0, len(requestItems))
 	for _, requestItem := range requestItems {
 		key, err := s.saveValue(ctx, requestItem.OriginalURL)
 		if err != nil {
 			return nil, fmt.Errorf("SaveBatch, saveValue failed: %w", err)
 		}
 
-		responseItems = append(responseItems, &BatchResponseItem{
+		responseItems = append(responseItems, &domain.BatchResponseItem{
 			CorelationID: requestItem.CorelationID,
 			Key:          key,
 		})
@@ -121,7 +122,7 @@ func (s *MemoryStore) saveValue(ctx context.Context, value string) (string, erro
 	}
 
 	// Save to cold store.
-	coldStoreEntry := &ColdStoreEntry{
+	coldStoreEntry := &domain.ColdStoreEntry{
 		Key:   key,
 		Value: value,
 	}
