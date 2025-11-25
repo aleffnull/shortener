@@ -21,6 +21,7 @@ import (
 	"github.com/aleffnull/shortener/models"
 )
 
+// Handler Структура обработчиков ручек.
 type Handler struct {
 	shortener      App
 	parameters     parameters.AppParameters
@@ -28,6 +29,7 @@ type Handler struct {
 	auditReceivers []audit.Receiver
 }
 
+// NewHandler Конструктор.
 func NewHandler(
 	shortener App,
 	parameters parameters.AppParameters,
@@ -42,6 +44,7 @@ func NewHandler(
 	}
 }
 
+// HandleGetRequest обработчик GET-запроса.
 func (h *Handler) HandleGetRequest(response http.ResponseWriter, request *http.Request, key string) {
 	if key == "favicon.ico" {
 		response.WriteHeader(http.StatusNotFound)
@@ -74,6 +77,7 @@ func (h *Handler) HandleGetRequest(response http.ResponseWriter, request *http.R
 	})
 }
 
+// HandleGetUserURLsRequest обработчик запроса получения всех URL пользователя.
 func (h *Handler) HandleGetUserURLsRequest(response http.ResponseWriter, request *http.Request) {
 	ctx := request.Context()
 	userID := middleware.GetUserIDFromContext(ctx)
@@ -97,6 +101,7 @@ func (h *Handler) HandleGetUserURLsRequest(response http.ResponseWriter, request
 	}
 }
 
+// HandlePostRequest Обработчик POST-запроса.
 func (h *Handler) HandlePostRequest(response http.ResponseWriter, request *http.Request) {
 	body, err := io.ReadAll(request.Body)
 	if err != nil {
@@ -135,6 +140,7 @@ func (h *Handler) HandlePostRequest(response http.ResponseWriter, request *http.
 	}
 }
 
+// HandleAPIRequest обработчик POST-запроса с JSON-нагрузкой.
 func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.Request) {
 	var shortenRequest models.ShortenRequest
 	if err := json.NewDecoder(request.Body).Decode(&shortenRequest); err != nil {
@@ -174,6 +180,7 @@ func (h *Handler) HandleAPIRequest(response http.ResponseWriter, request *http.R
 	}
 }
 
+// HandleAPIBatchRequest обработчик запроса пакетного сокращения URL.
 func (h *Handler) HandleAPIBatchRequest(response http.ResponseWriter, request *http.Request) {
 	var requestItems []*models.ShortenBatchRequestItem
 	if err := json.NewDecoder(request.Body).Decode(&requestItems); err != nil {
@@ -204,6 +211,7 @@ func (h *Handler) HandleAPIBatchRequest(response http.ResponseWriter, request *h
 	}
 }
 
+// HandleBatchDeleteRequest обработчик запроса пакетного удаления.
 func (h *Handler) HandleBatchDeleteRequest(response http.ResponseWriter, request *http.Request) {
 	var keys []string
 	if err := json.NewDecoder(request.Body).Decode(&keys); err != nil {
@@ -218,6 +226,7 @@ func (h *Handler) HandleBatchDeleteRequest(response http.ResponseWriter, request
 	response.WriteHeader(http.StatusAccepted)
 }
 
+// HandlePingRequest обработчик запроса проверки работоспособности.
 func (h *Handler) HandlePingRequest(response http.ResponseWriter, request *http.Request) {
 	err := h.shortener.CheckStore(request.Context())
 	if err != nil {

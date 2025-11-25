@@ -50,3 +50,6 @@ bench:
 
 format:
 	find . -name \*.go -exec goimports -v -local "github.com/aleffnull/shortener" -w {} \;
+
+docs:
+	godoc -v -play -http=:9090
