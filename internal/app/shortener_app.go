@@ -8,14 +8,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/samber/lo"
+
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/domain"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/parameters"
 	"github.com/aleffnull/shortener/internal/pkg/store"
 	"github.com/aleffnull/shortener/internal/repository"
 	"github.com/aleffnull/shortener/models"
-	"github.com/google/uuid"
-	"github.com/samber/lo"
 )
 
 type ShortenerApp struct {
@@ -90,6 +92,7 @@ func (s *ShortenerApp) GetURL(ctx context.Context, key string) (*models.GetURLRe
 
 	return &models.GetURLResponseItem{
 		URL:       item.URL,
+		UserID:    item.UserID,
 		IsDeleted: item.IsDeleted,
 	}, nil
 }
@@ -148,8 +151,8 @@ func (s *ShortenerApp) ShortenURLBatch(ctx context.Context, requestItems []*mode
 		return []*models.ShortenBatchResponseItem{}, nil
 	}
 
-	requestModels := lo.Map(requestItems, func(item *models.ShortenBatchRequestItem, _ int) *store.BatchRequestItem {
-		return &store.BatchRequestItem{
+	requestModels := lo.Map(requestItems, func(item *models.ShortenBatchRequestItem, _ int) *domain.BatchRequestItem {
+		return &domain.BatchRequestItem{
 			CorelationID: item.CorelationID,
 			OriginalURL:  item.OriginalURL,
 		}

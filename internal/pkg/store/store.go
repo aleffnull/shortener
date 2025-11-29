@@ -3,10 +3,12 @@ package store
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/domain"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/repository"
-	"github.com/google/uuid"
 )
 
 type StoreManager interface {
@@ -16,10 +18,10 @@ type StoreManager interface {
 }
 
 type DataStore interface {
-	Load(context.Context, string) (*URLItem, error)
-	LoadAllByUserID(context.Context, uuid.UUID) ([]*KeyOriginalURLItem, error)
+	Load(context.Context, string) (*domain.URLItem, error)
+	LoadAllByUserID(context.Context, uuid.UUID) ([]*domain.KeyOriginalURLItem, error)
 	Save(context.Context, string, uuid.UUID) (string, error)
-	SaveBatch(context.Context, []*BatchRequestItem, uuid.UUID) ([]*BatchResponseItem, error)
+	SaveBatch(context.Context, []*domain.BatchRequestItem, uuid.UUID) ([]*domain.BatchResponseItem, error)
 	DeleteBatch(context.Context, []string, uuid.UUID) error
 }
 
@@ -29,8 +31,8 @@ type Store interface {
 }
 
 type ColdStore interface {
-	LoadAll() ([]*ColdStoreEntry, error)
-	Save(*ColdStoreEntry) error
+	LoadAll() ([]*domain.ColdStoreEntry, error)
+	Save(*domain.ColdStoreEntry) error
 }
 
 func NewStore(

@@ -13,9 +13,13 @@ import (
 type Configuration struct {
 	ServerAddress string                      `env:"SERVER_ADDRESS" validate:"required,hostname_port"`
 	BaseURL       string                      `env:"BASE_URL" validate:"required,url"`
+	AuditFile     string                      `env:"AUDIT_FILE" validate:"omitempty,filepath"`
+	AuditURL      string                      `env:"AUDIT_URL" validate:"omitempty,url"`
 	MemoryStore   *MemoryStoreConfiguration   `validate:"required"`
 	FileStore     *FileStoreConfiguration     `validate:"required"`
 	DatabaseStore *DatabaseStoreConfiguration `validate:"required"`
+	CPUProfile    string                      `env:"CPU_PROFILE" validate:"omitempty,filepath"`
+	MemoryProfile string                      `env:"MEMORY_PROFILE" validate:"omitempty,filepath"`
 }
 
 func (c *Configuration) String() string {
@@ -25,6 +29,22 @@ func (c *Configuration) String() string {
 		"&Configuration{ServerAddress:%v BaseURL:%v",
 		c.ServerAddress,
 		c.BaseURL)
+
+	if len(c.AuditFile) > 0 {
+		fmt.Fprintf(sb, " AuditFile:%v", c.AuditFile)
+	}
+
+	if len(c.AuditURL) > 0 {
+		fmt.Fprintf(sb, " AuditURL:%v", c.AuditURL)
+	}
+
+	if len(c.CPUProfile) > 0 {
+		fmt.Fprintf(sb, " CPUProfile:%v", c.CPUProfile)
+	}
+
+	if len(c.MemoryProfile) > 0 {
+		fmt.Fprintf(sb, " MemoryProfile:%v", c.MemoryProfile)
+	}
 
 	if c.MemoryStore == nil {
 		fmt.Fprintf(sb, " MemoryStore:<nil>")
@@ -62,6 +82,8 @@ func GetConfiguration() (*Configuration, error) {
 	configuration := &Configuration{
 		ServerAddress: lo.Ternary(len(envConfig.ServerAddress) > 0, envConfig.ServerAddress, flagConfig.ServerAddress),
 		BaseURL:       lo.Ternary(len(envConfig.BaseURL) > 0, envConfig.BaseURL, flagConfig.BaseURL),
+		AuditFile:     lo.Ternary(len(envConfig.AuditFile) > 0, envConfig.AuditFile, flagConfig.AuditFile),
+		AuditURL:      lo.Ternary(len(envConfig.AuditURL) > 0, envConfig.AuditURL, flagConfig.AuditURL),
 		MemoryStore:   defaultMemoryStoreConfiguration(),
 		FileStore: &FileStoreConfiguration{
 			FilePath: lo.Ternary(
@@ -74,6 +96,8 @@ func GetConfiguration() (*Configuration, error) {
 			envConfig.DatabaseStore.DataSourceName,
 			flagConfig.DatabaseStore.DataSourceName,
 		)),
+		CPUProfile:    lo.Ternary(len(envConfig.CPUProfile) > 0, envConfig.CPUProfile, flagConfig.CPUProfile),
+		MemoryProfile: lo.Ternary(len(envConfig.MemoryProfile) > 0, envConfig.MemoryProfile, flagConfig.MemoryProfile),
 	}
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	err = validate.Struct(configuration)
@@ -92,8 +116,12 @@ func parseFlags() (*Configuration, error) {
 
 	flag.StringVar(&configuration.ServerAddress, "a", "localhost:8080", "address and port of running server")
 	flag.StringVar(&configuration.BaseURL, "b", "http://localhost:8080", "short link base URL")
+	flag.StringVar(&configuration.AuditFile, "audit-file", "", "audit file path")
+	flag.StringVar(&configuration.AuditURL, "audit-url", "", "audit endpoint URL")
 	flag.StringVar(&configuration.FileStore.FilePath, "f", "shortener.jsonl", "path to storage file")
 	flag.StringVar(&configuration.DatabaseStore.DataSourceName, "d", "", "data source name")
+	flag.StringVar(&configuration.CPUProfile, "cpu-profile", "", "path to CPU profile file")
+	flag.StringVar(&configuration.MemoryProfile, "memory-profile", "", "path to memory profile file")
 	flag.Parse()
 
 	return configuration, nil

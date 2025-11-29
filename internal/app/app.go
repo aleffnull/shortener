@@ -3,8 +3,9 @@ package app
 import (
 	"context"
 
-	"github.com/aleffnull/shortener/models"
 	"github.com/google/uuid"
+
+	"github.com/aleffnull/shortener/models"
 )
 
 type App interface {
