@@ -9,7 +9,7 @@ import (
 	"github.com/ldez/mimetype"
 )
 
-func ExampleHandler_HandleAPIRequest() {
+func ExampleAPIHandler_HandleAPIRequest() {
 	type shortenRequest struct {
 		URL string `json:"url"`
 	}

@@ -16,14 +16,27 @@ import (
 const mimetypeApplicationGZIP = "application/x-gzip"
 
 type Router struct {
-	handler              *Handler
+	maintenanceHandler   *MaintenanceHandler
+	simpleAPIHandler     *SimpleAPIHandler
+	apiHandler           *APIHandler
+	userHandler          *UserHandler
 	authorizationService service.AuthorizationService
 	logger               logger.Logger
 }
 
-func NewRouter(handler *Handler, authorizationService service.AuthorizationService, logger logger.Logger) *Router {
+func NewRouter(
+	maintenanceHandler *MaintenanceHandler,
+	simpleAPIHandler *SimpleAPIHandler,
+	apiHandler *APIHandler,
+	userHandler *UserHandler,
+	authorizationService service.AuthorizationService,
+	logger logger.Logger,
+) *Router {
 	return &Router{
-		handler:              handler,
+		maintenanceHandler:   maintenanceHandler,
+		simpleAPIHandler:     simpleAPIHandler,
+		apiHandler:           apiHandler,
+		userHandler:          userHandler,
 		authorizationService: authorizationService,
 		logger:               logger,
 	}
@@ -35,7 +48,7 @@ func (r *Router) NewMuxHandler() http.Handler {
 		return middleware.LogHandler(next, r.logger)
 	})
 
-	mux.Get("/ping", r.handler.HandlePingRequest)
+	mux.Get("/ping", r.maintenanceHandler.HandlePingRequest)
 
 	mux.Route("/", func(t chi.Router) {
 		t.Get("/{key}",
@@ -43,7 +56,7 @@ func (r *Router) NewMuxHandler() http.Handler {
 				setContentType(
 					func(writer http.ResponseWriter, request *http.Request) {
 						key := chi.URLParam(request, "key")
-						r.handler.HandleGetRequest(writer, request, key)
+						r.simpleAPIHandler.HandleGetRequest(writer, request, key)
 					},
 					mimetype.TextPlain),
 				r.authorizationService,
@@ -52,7 +65,7 @@ func (r *Router) NewMuxHandler() http.Handler {
 		t.Post("/",
 			middleware.UserIDHandler(
 				setContentType(
-					middleware.GzipHandler(r.handler.HandlePostRequest),
+					middleware.GzipHandler(r.simpleAPIHandler.HandlePostRequest),
 					mimetype.TextPlain, mimetypeApplicationGZIP),
 				r.authorizationService,
 				r.logger,
@@ -69,8 +82,8 @@ func (r *Router) NewMuxHandler() http.Handler {
 				r.logger,
 				middleware.UserIDOptionsNone)
 		})
-		t.Post("/", r.handler.HandleAPIRequest)
-		t.Post("/batch", r.handler.HandleAPIBatchRequest)
+		t.Post("/", r.apiHandler.HandleAPIRequest)
+		t.Post("/batch", r.apiHandler.HandleAPIBatchRequest)
 	})
 
 	mux.Route("/api/user/urls", func(t chi.Router) {
@@ -84,8 +97,8 @@ func (r *Router) NewMuxHandler() http.Handler {
 				middleware.UserIDOptionsRequireValidToken)
 		})
 
-		t.Get("/", r.handler.HandleGetUserURLsRequest)
-		t.Delete("/", r.handler.HandleBatchDeleteRequest)
+		t.Get("/", r.userHandler.HandleGetUserURLsRequest)
+		t.Delete("/", r.userHandler.HandleBatchDeleteRequest)
 	})
 
 	mux.Route("/debug/pprof", func(r chi.Router) {

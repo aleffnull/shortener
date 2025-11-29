@@ -113,7 +113,11 @@ func main() {
 			NewHTTPServer,
 			asReceiver(audit.NewFileReceiver),
 			asReceiver(audit.NewEndpointReceiver),
-			fx.Annotate(app.NewHandler, fx.ParamTags("", "", "", `group:"receivers"`)),
+			// fx.Annotate(app.NewHandler, fx.ParamTags("", "", "", `group:"receivers"`)),
+			app.NewMaintenanceHandler,
+			app.NewSimpleAPIHandler,
+			app.NewAPIHandler,
+			app.NewUserHandler,
 		),
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: log}
