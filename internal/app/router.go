@@ -31,14 +31,14 @@ func NewRouter(handler *Handler, authorizationService service.AuthorizationServi
 
 func (r *Router) NewMuxHandler() http.Handler {
 	mux := chi.NewRouter()
+	mux.Use(func(next http.Handler) http.Handler {
+		return middleware.LogHandler(next, r.logger)
+	})
 
-	mux.Get("/ping",
-		middleware.LogHandler(
-			r.handler.HandlePingRequest,
-			r.logger))
+	mux.Get("/ping", r.handler.HandlePingRequest)
 
-	mux.Get("/{key}",
-		middleware.LogHandler(
+	mux.Route("/", func(t chi.Router) {
+		t.Get("/{key}",
 			middleware.UserIDHandler(
 				setContentType(
 					func(writer http.ResponseWriter, request *http.Request) {
@@ -48,63 +48,45 @@ func (r *Router) NewMuxHandler() http.Handler {
 					mimetype.TextPlain),
 				r.authorizationService,
 				r.logger,
-				middleware.UserIDOptionsRequireValidToken),
-			r.logger))
-
-	mux.Get("/api/user/urls",
-		middleware.LogHandler(
-			middleware.UserIDHandler(
-				setContentType(
-					middleware.GzipHandler(r.handler.HandleGetUserURLsRequest),
-					mimetype.ApplicationJSON, mimetypeApplicationGZIP),
-				r.authorizationService,
-				r.logger,
-				middleware.UserIDOptionsRequireValidToken),
-			r.logger))
-
-	mux.Delete("/api/user/urls",
-		middleware.LogHandler(
-			middleware.UserIDHandler(
-				setContentType(
-					middleware.GzipHandler(r.handler.HandleBatchDeleteRequest),
-					mimetype.ApplicationJSON, mimetypeApplicationGZIP),
-				r.authorizationService,
-				r.logger,
-				middleware.UserIDOptionsRequireValidToken),
-			r.logger))
-
-	mux.Post("/",
-		middleware.LogHandler(
+				middleware.UserIDOptionsRequireValidToken))
+		t.Post("/",
 			middleware.UserIDHandler(
 				setContentType(
 					middleware.GzipHandler(r.handler.HandlePostRequest),
 					mimetype.TextPlain, mimetypeApplicationGZIP),
 				r.authorizationService,
 				r.logger,
-				middleware.UserIDOptionsNone),
-			r.logger))
+				middleware.UserIDOptionsNone))
+	})
 
-	mux.Post("/api/shorten",
-		middleware.LogHandler(
-			middleware.UserIDHandler(
+	mux.Route("/api/shorten", func(t chi.Router) {
+		t.Use(func(next http.Handler) http.Handler {
+			return middleware.UserIDHandler(
 				setContentType(
-					middleware.GzipHandler(r.handler.HandleAPIRequest),
+					middleware.GzipHandler(next.ServeHTTP),
 					mimetype.ApplicationJSON, mimetypeApplicationGZIP),
 				r.authorizationService,
 				r.logger,
-				middleware.UserIDOptionsNone),
-			r.logger))
+				middleware.UserIDOptionsNone)
+		})
+		t.Post("/", r.handler.HandleAPIRequest)
+		t.Post("/batch", r.handler.HandleAPIBatchRequest)
+	})
 
-	mux.Post("/api/shorten/batch",
-		middleware.LogHandler(
-			middleware.UserIDHandler(
+	mux.Route("/api/user/urls", func(t chi.Router) {
+		t.Use(func(next http.Handler) http.Handler {
+			return middleware.UserIDHandler(
 				setContentType(
-					middleware.GzipHandler(r.handler.HandleAPIBatchRequest),
+					middleware.GzipHandler(next.ServeHTTP),
 					mimetype.ApplicationJSON, mimetypeApplicationGZIP),
 				r.authorizationService,
 				r.logger,
-				middleware.UserIDOptionsNone),
-			r.logger))
+				middleware.UserIDOptionsRequireValidToken)
+		})
+
+		t.Get("/", r.handler.HandleGetUserURLsRequest)
+		t.Delete("/", r.handler.HandleBatchDeleteRequest)
+	})
 
 	mux.Route("/debug/pprof", func(r chi.Router) {
 		r.Get("/cmdline", pprof.Cmdline)
