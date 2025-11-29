@@ -24,4 +24,4 @@ vendor/
 .vscode
 
 # Project artifacts
-shortener.jsonl
+*.jsonl

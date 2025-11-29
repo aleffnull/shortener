@@ -1,4 +1,5 @@
 DATABASE_DSN=postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable make run
+DATABASE_DSN=postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable AUDIT_FILE=audit.jsonl make run
 DATABASE_DSN=postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable CPU_PROFILE=profiles/cpu.pprof MEMORY_PROFILE=profiles/memory.pprof make run
 
 curl http://localhost:8080/ping -X GET -i
@@ -9,13 +10,13 @@ curl http://localhost:8080 \
 	-i \
 	-d "https://practicum.yandex.ru/"
 
-curl http://localhost:8080/BnyjewDP -X GET -i
+curl http://localhost:8080/GXpAcfyW -X GET -i
 
 curl http://localhost:8080/api/user/urls -X GET -i
 
 curl http://localhost:8080/api/user/urls \
 	-X GET \
-	-H "Cookie: X-UserID=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTczNDQxMTMsIlVzZXJJRCI6ImJiM2E1NjA5LWYxZjgtNDYyOC05MDY0LWU4NDBlZTEyMDk4YiJ9.yulPtGFM2NiKaUKsa84eqPI8CTkV_ujqgqXuxqYkhPg;" \
+	-H "Cookie: X-UserID=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjQ1MTY3NjcsIlVzZXJJRCI6IjM4NmNhODk0LTA5M2MtNDAzNy04ZjUyLTYzZTk0YjUzYTE5MSJ9.ZEeN4v1bEalvf2y9iUVAeLPDuAA3yZHB0St48bp9CIc" \
 	-i
 
 curl http://localhost:8080/GVDPUPWl \

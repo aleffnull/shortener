@@ -17,12 +17,14 @@ import (
 	"github.com/aleffnull/shortener/internal/pkg/parameters"
 	"github.com/aleffnull/shortener/internal/pkg/store"
 	"github.com/aleffnull/shortener/internal/repository"
+	"github.com/aleffnull/shortener/internal/service"
 	"github.com/aleffnull/shortener/models"
 )
 
 type ShortenerApp struct {
 	connection        repository.Connection
 	storage           store.Store
+	auditService      service.AuditService
 	logger            logger.Logger
 	parameters        parameters.AppParameters
 	configuration     *config.Configuration
@@ -40,6 +42,7 @@ var _ App = (*ShortenerApp)(nil)
 func NewShortenerApp(
 	connection repository.Connection,
 	storage store.Store,
+	auditService service.AuditService,
 	logger logger.Logger,
 	parameters parameters.AppParameters,
 	configuration *config.Configuration,
@@ -47,6 +50,7 @@ func NewShortenerApp(
 	return &ShortenerApp{
 		connection:        connection,
 		storage:           storage,
+		auditService:      auditService,
 		logger:            logger,
 		parameters:        parameters,
 		configuration:     configuration,
@@ -68,6 +72,7 @@ func (s *ShortenerApp) Init(ctx context.Context) error {
 		return fmt.Errorf("ShortenerApp.Init, parameters.Init failed: %w", err)
 	}
 
+	s.auditService.Init()
 	go s.deletePendingURLs()
 
 	return nil
@@ -76,6 +81,7 @@ func (s *ShortenerApp) Init(ctx context.Context) error {
 func (s *ShortenerApp) Shutdown() {
 	close(s.quitChannel)
 	close(s.deleteURLsChannel)
+	s.auditService.Shutdown()
 	s.storage.Shutdown()
 	s.connection.Shutdown()
 }

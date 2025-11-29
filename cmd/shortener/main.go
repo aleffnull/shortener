@@ -28,11 +28,12 @@ func NewShortenerApp(
 	lc fx.Lifecycle,
 	connection repository.Connection,
 	storage store.Store,
+	auditService service.AuditService,
 	log logger.Logger,
 	parameters parameters.AppParameters,
 	configuration *config.Configuration,
 ) app.App {
-	shortener := app.NewShortenerApp(connection, storage, log, parameters, configuration)
+	shortener := app.NewShortenerApp(connection, storage, auditService, log, parameters, configuration)
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			err := shortener.Init(ctx)
@@ -108,12 +109,16 @@ func main() {
 			store.NewStore,
 			parameters.NewAppParameters,
 			service.NewAuthorizationService,
+			fx.Annotate(service.NewAuditService, fx.ParamTags(`group:"receivers"`)),
 			NewShortenerApp,
 			app.NewRouter,
 			NewHTTPServer,
+			app.NewMaintenanceHandler,
+			app.NewSimpleAPIHandler,
+			app.NewAPIHandler,
+			app.NewUserHandler,
 			asReceiver(audit.NewFileReceiver),
 			asReceiver(audit.NewEndpointReceiver),
-			fx.Annotate(app.NewHandler, fx.ParamTags("", "", "", `group:"receivers"`)),
 		),
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: log}
