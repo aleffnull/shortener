@@ -6,12 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aleffnull/shortener/internal/config"
-	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
+
+	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/pkg/logger"
 )
 
 type Connection interface {

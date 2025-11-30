@@ -4,14 +4,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aleffnull/shortener/internal/config"
-	"github.com/aleffnull/shortener/internal/pkg/mocks"
-	"github.com/aleffnull/shortener/internal/pkg/store"
-	"github.com/aleffnull/shortener/models"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+
+	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/domain"
+	"github.com/aleffnull/shortener/internal/pkg/mocks"
+	"github.com/aleffnull/shortener/models"
 )
 
 func TestShortenerApp_GetURL(t *testing.T) {
@@ -24,9 +25,16 @@ func TestShortenerApp_GetURL(t *testing.T) {
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	mock := mocks.NewMock(ctrl)
-	mock.Store.EXPECT().Load(gomock.Any(), key).Return(&store.URLItem{URL: shortURL}, nil)
+	mock.Store.EXPECT().Load(gomock.Any(), key).Return(&domain.URLItem{URL: shortURL}, nil)
 	configuration := &config.Configuration{}
-	shortener := NewShortenerApp(mock.Connection, mock.Store, mock.Logger, mock.AppParameters, configuration)
+	shortener := NewShortenerApp(
+		mock.Connection,
+		mock.Store,
+		mock.AuditService,
+		mock.Logger,
+		mock.AppParameters,
+		configuration,
+	)
 
 	// Act.
 	item, err := shortener.GetURL(ctx, key)
@@ -93,7 +101,14 @@ func TestShortenerApp_ShortenURL(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			mock := mocks.NewMock(ctrl)
 			tt.hookBefore(tt.request, mock)
-			shortener := NewShortenerApp(mock.Connection, mock.Store, mock.Logger, mock.AppParameters, tt.configuration)
+			shortener := NewShortenerApp(
+				mock.Connection,
+				mock.Store,
+				mock.AuditService,
+				mock.Logger,
+				mock.AppParameters,
+				tt.configuration,
+			)
 
 			response, err := shortener.ShortenURL(ctx, tt.request, uuid.New())
 			require.Equal(t, tt.response, response)

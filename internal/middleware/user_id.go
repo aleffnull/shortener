@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/google/uuid"
+
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/utils"
 	"github.com/aleffnull/shortener/internal/service"
-	"github.com/google/uuid"
 )
 
 type UserIDOptions int

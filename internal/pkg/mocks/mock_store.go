@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	store "github.com/aleffnull/shortener/internal/pkg/store"
+	domain "github.com/aleffnull/shortener/internal/domain"
 	uuid "github.com/google/uuid"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -121,10 +121,10 @@ func (mr *MockDataStoreMockRecorder) DeleteBatch(arg0, arg1, arg2 any) *gomock.C
 }
 
 // Load mocks base method.
-func (m *MockDataStore) Load(arg0 context.Context, arg1 string) (*store.URLItem, error) {
+func (m *MockDataStore) Load(arg0 context.Context, arg1 string) (*domain.URLItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Load", arg0, arg1)
-	ret0, _ := ret[0].(*store.URLItem)
+	ret0, _ := ret[0].(*domain.URLItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -136,10 +136,10 @@ func (mr *MockDataStoreMockRecorder) Load(arg0, arg1 any) *gomock.Call {
 }
 
 // LoadAllByUserID mocks base method.
-func (m *MockDataStore) LoadAllByUserID(arg0 context.Context, arg1 uuid.UUID) ([]*store.KeyOriginalURLItem, error) {
+func (m *MockDataStore) LoadAllByUserID(arg0 context.Context, arg1 uuid.UUID) ([]*domain.KeyOriginalURLItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LoadAllByUserID", arg0, arg1)
-	ret0, _ := ret[0].([]*store.KeyOriginalURLItem)
+	ret0, _ := ret[0].([]*domain.KeyOriginalURLItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -166,10 +166,10 @@ func (mr *MockDataStoreMockRecorder) Save(arg0, arg1, arg2 any) *gomock.Call {
 }
 
 // SaveBatch mocks base method.
-func (m *MockDataStore) SaveBatch(arg0 context.Context, arg1 []*store.BatchRequestItem, arg2 uuid.UUID) ([]*store.BatchResponseItem, error) {
+func (m *MockDataStore) SaveBatch(arg0 context.Context, arg1 []*domain.BatchRequestItem, arg2 uuid.UUID) ([]*domain.BatchResponseItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SaveBatch", arg0, arg1, arg2)
-	ret0, _ := ret[0].([]*store.BatchResponseItem)
+	ret0, _ := ret[0].([]*domain.BatchResponseItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -247,10 +247,10 @@ func (mr *MockStoreMockRecorder) Init() *gomock.Call {
 }
 
 // Load mocks base method.
-func (m *MockStore) Load(arg0 context.Context, arg1 string) (*store.URLItem, error) {
+func (m *MockStore) Load(arg0 context.Context, arg1 string) (*domain.URLItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Load", arg0, arg1)
-	ret0, _ := ret[0].(*store.URLItem)
+	ret0, _ := ret[0].(*domain.URLItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -262,10 +262,10 @@ func (mr *MockStoreMockRecorder) Load(arg0, arg1 any) *gomock.Call {
 }
 
 // LoadAllByUserID mocks base method.
-func (m *MockStore) LoadAllByUserID(arg0 context.Context, arg1 uuid.UUID) ([]*store.KeyOriginalURLItem, error) {
+func (m *MockStore) LoadAllByUserID(arg0 context.Context, arg1 uuid.UUID) ([]*domain.KeyOriginalURLItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LoadAllByUserID", arg0, arg1)
-	ret0, _ := ret[0].([]*store.KeyOriginalURLItem)
+	ret0, _ := ret[0].([]*domain.KeyOriginalURLItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -292,10 +292,10 @@ func (mr *MockStoreMockRecorder) Save(arg0, arg1, arg2 any) *gomock.Call {
 }
 
 // SaveBatch mocks base method.
-func (m *MockStore) SaveBatch(arg0 context.Context, arg1 []*store.BatchRequestItem, arg2 uuid.UUID) ([]*store.BatchResponseItem, error) {
+func (m *MockStore) SaveBatch(arg0 context.Context, arg1 []*domain.BatchRequestItem, arg2 uuid.UUID) ([]*domain.BatchResponseItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SaveBatch", arg0, arg1, arg2)
-	ret0, _ := ret[0].([]*store.BatchResponseItem)
+	ret0, _ := ret[0].([]*domain.BatchResponseItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -343,10 +343,10 @@ func (m *MockColdStore) EXPECT() *MockColdStoreMockRecorder {
 }
 
 // LoadAll mocks base method.
-func (m *MockColdStore) LoadAll() ([]*store.ColdStoreEntry, error) {
+func (m *MockColdStore) LoadAll() ([]*domain.ColdStoreEntry, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LoadAll")
-	ret0, _ := ret[0].([]*store.ColdStoreEntry)
+	ret0, _ := ret[0].([]*domain.ColdStoreEntry)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -358,7 +358,7 @@ func (mr *MockColdStoreMockRecorder) LoadAll() *gomock.Call {
 }
 
 // Save mocks base method.
-func (m *MockColdStore) Save(arg0 *store.ColdStoreEntry) error {
+func (m *MockColdStore) Save(arg0 *domain.ColdStoreEntry) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Save", arg0)
 	ret0, _ := ret[0].(error)

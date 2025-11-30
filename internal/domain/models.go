@@ -1,4 +1,6 @@
-package store
+package domain
+
+import "github.com/google/uuid"
 
 type ColdStoreEntry struct {
 	Key   string `json:"key"`
@@ -22,5 +24,6 @@ type KeyOriginalURLItem struct {
 
 type URLItem struct {
 	URL       string
+	UserID    uuid.UUID
 	IsDeleted bool
 }

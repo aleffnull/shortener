@@ -6,16 +6,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/go-http-utils/headers"
+
+	"github.com/aleffnull/shortener/internal/pkg/logger"
 )
 
-func LogHandler(handlerFunc http.HandlerFunc, logger logger.Logger) http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
+func LogHandler(handlerFunc http.Handler, logger logger.Logger) http.Handler {
+	fn := func(writer http.ResponseWriter, request *http.Request) {
 		startTime := time.Now()
 		responseWriter := NewResponseWriter(writer)
-		handlerFunc(responseWriter, request)
+		handlerFunc.ServeHTTP(responseWriter, request)
 		duration := time.Since(startTime)
+
+		status := responseWriter.GetStatus()
+		if status == http.StatusCreated || status == http.StatusOK {
+			return
+		}
 
 		sb := &strings.Builder{}
 
@@ -40,4 +46,6 @@ func LogHandler(handlerFunc http.HandlerFunc, logger logger.Logger) http.Handler
 
 		logger.Infof(sb.String())
 	}
+
+	return http.HandlerFunc(fn)
 }
