@@ -54,3 +54,14 @@ format:
 
 docs:
 	godoc -v -play -http=:9090
+
+calc_coverage:
+	go test ./... -coverprofile cover.out.tmp
+	cat cover.out.tmp | grep -v "mock" > cover.out
+	rm cover.out.tmp
+
+coverage: calc_coverage
+	go tool cover -func cover.out
+
+coverage_html: coverage
+	go tool cover -html=cover.out
