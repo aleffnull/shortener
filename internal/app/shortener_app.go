@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"sync"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
@@ -24,17 +22,11 @@ import (
 type ShortenerApp struct {
 	connection        repository.Connection
 	storage           store.Store
+	deleteURLsService service.DeleteURLsService
 	auditService      service.AuditService
 	logger            logger.Logger
 	parameters        parameters.AppParameters
 	configuration     *config.Configuration
-	deleteURLsChannel chan deleteURLsRequest
-	quitChannel       chan struct{}
-}
-
-type deleteURLsRequest struct {
-	keys   []string
-	userID uuid.UUID
 }
 
 var _ App = (*ShortenerApp)(nil)
@@ -42,6 +34,7 @@ var _ App = (*ShortenerApp)(nil)
 func NewShortenerApp(
 	connection repository.Connection,
 	storage store.Store,
+	deleteURLsService service.DeleteURLsService,
 	auditService service.AuditService,
 	logger logger.Logger,
 	parameters parameters.AppParameters,
@@ -50,12 +43,11 @@ func NewShortenerApp(
 	return &ShortenerApp{
 		connection:        connection,
 		storage:           storage,
+		deleteURLsService: deleteURLsService,
 		auditService:      auditService,
 		logger:            logger,
 		parameters:        parameters,
 		configuration:     configuration,
-		deleteURLsChannel: make(chan deleteURLsRequest, 100),
-		quitChannel:       make(chan struct{}),
 	}
 }
 
@@ -73,14 +65,13 @@ func (s *ShortenerApp) Init(ctx context.Context) error {
 	}
 
 	s.auditService.Init()
-	go s.deletePendingURLs()
+	s.deleteURLsService.Init()
 
 	return nil
 }
 
 func (s *ShortenerApp) Shutdown() {
-	close(s.quitChannel)
-	close(s.deleteURLsChannel)
+	s.deleteURLsService.Shutdown()
 	s.auditService.Shutdown()
 	s.storage.Shutdown()
 	s.connection.Shutdown()
@@ -159,8 +150,8 @@ func (s *ShortenerApp) ShortenURLBatch(ctx context.Context, requestItems []*mode
 
 	requestModels := lo.Map(requestItems, func(item *models.ShortenBatchRequestItem, _ int) *domain.BatchRequestItem {
 		return &domain.BatchRequestItem{
-			CorelationID: item.CorelationID,
-			OriginalURL:  item.OriginalURL,
+			CorrelationID: item.CorrelationID,
+			OriginalURL:   item.OriginalURL,
 		}
 	})
 	responseModels, err := s.storage.SaveBatch(ctx, requestModels, userID)
@@ -176,8 +167,8 @@ func (s *ShortenerApp) ShortenURLBatch(ctx context.Context, requestItems []*mode
 		}
 
 		responseItems = append(responseItems, &models.ShortenBatchResponseItem{
-			CorelationID: responseModel.CorelationID,
-			ShortURL:     shortURL,
+			CorrelationID: responseModel.CorrelationID,
+			ShortURL:      shortURL,
 		})
 	}
 
@@ -185,10 +176,10 @@ func (s *ShortenerApp) ShortenURLBatch(ctx context.Context, requestItems []*mode
 }
 
 func (s *ShortenerApp) DeleteURLs(keys []string, userID uuid.UUID) {
-	s.deleteURLsChannel <- deleteURLsRequest{
-		keys:   keys,
-		userID: userID,
-	}
+	s.deleteURLsService.Delete(&domain.DeleteURLsRequest{
+		Keys:   keys,
+		UserID: userID,
+	})
 }
 
 func (s *ShortenerApp) CheckStore(ctx context.Context) error {
@@ -198,61 +189,4 @@ func (s *ShortenerApp) CheckStore(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (s *ShortenerApp) deletePendingURLs() {
-	ticker := time.NewTicker(3 * time.Second)
-
-	requests := []deleteURLsRequest{}
-	for {
-		select {
-		case <-s.quitChannel:
-			// Завершаем работу.
-			return
-		case request := <-s.deleteURLsChannel:
-			// Накапливаем сообщения.
-			requests = append(requests, request)
-		case <-ticker.C:
-			// Пробуем выполнить удаление при каждом срабатывании таймера.
-			if len(requests) == 0 {
-				continue
-			}
-
-			requests = s.doDeleteURLs(requests)
-		}
-	}
-}
-
-func (s *ShortenerApp) doDeleteURLs(requests []deleteURLsRequest) []deleteURLsRequest {
-	// Ограничиваем количество одновременных запросов к базе.
-	semaphore := make(chan struct{}, 5)
-	waitGroup := sync.WaitGroup{}
-	// Если что-то не смогли удалить, нужно это сохранить.
-	nonDeletedChannel := make(chan deleteURLsRequest, len(requests))
-
-	for _, request := range requests {
-		semaphore <- struct{}{}
-		waitGroup.Add(1)
-
-		go func() {
-			defer waitGroup.Done()
-			defer func() { <-semaphore }()
-
-			if err := s.storage.DeleteBatch(context.Background(), request.keys, request.userID); err != nil {
-				s.logger.Errorf("ShortenerApp.deletePendingURLs, storage.DeleteBatch failed: %v", err)
-				nonDeletedChannel <- request
-			}
-		}()
-	}
-
-	waitGroup.Wait()
-	close(nonDeletedChannel)
-
-	// Восстановим то, что не смогли удалить.
-	notDeletedRequests := []deleteURLsRequest{}
-	for request := range nonDeletedChannel {
-		notDeletedRequests = append(notDeletedRequests, request)
-	}
-
-	return notDeletedRequests
 }

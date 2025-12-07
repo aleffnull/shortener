@@ -28,12 +28,13 @@ func NewShortenerApp(
 	lc fx.Lifecycle,
 	connection repository.Connection,
 	storage store.Store,
+	deleteURLsService service.DeleteURLsService,
 	auditService service.AuditService,
 	log logger.Logger,
 	parameters parameters.AppParameters,
 	configuration *config.Configuration,
 ) app.App {
-	shortener := app.NewShortenerApp(connection, storage, auditService, log, parameters, configuration)
+	shortener := app.NewShortenerApp(connection, storage, deleteURLsService, auditService, log, parameters, configuration)
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			err := shortener.Init(ctx)
@@ -109,6 +110,7 @@ func main() {
 			store.NewStore,
 			parameters.NewAppParameters,
 			service.NewAuthorizationService,
+			service.NewDeleteURLsService,
 			fx.Annotate(service.NewAuditService, fx.ParamTags(`group:"receivers"`)),
 			NewShortenerApp,
 			app.NewRouter,

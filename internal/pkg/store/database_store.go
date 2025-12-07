@@ -158,8 +158,8 @@ func (s *DatabaseStore) SaveBatch(ctx context.Context, requestItems []*domain.Ba
 				}
 
 				responseItems = append(responseItems, &domain.BatchResponseItem{
-					CorelationID: requestItem.CorelationID,
-					Key:          key,
+					CorrelationID: requestItem.CorrelationID,
+					Key:           key,
 				})
 			}
 

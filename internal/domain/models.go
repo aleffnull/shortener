@@ -8,13 +8,13 @@ type ColdStoreEntry struct {
 }
 
 type BatchRequestItem struct {
-	CorelationID string
-	OriginalURL  string
+	CorrelationID string
+	OriginalURL   string
 }
 
 type BatchResponseItem struct {
-	CorelationID string
-	Key          string
+	CorrelationID string
+	Key           string
 }
 
 type KeyOriginalURLItem struct {
@@ -26,4 +26,9 @@ type URLItem struct {
 	URL       string
 	UserID    uuid.UUID
 	IsDeleted bool
+}
+
+type DeleteURLsRequest struct {
+	Keys   []string
+	UserID uuid.UUID
 }

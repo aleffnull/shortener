@@ -102,8 +102,8 @@ func (s *MemoryStore) SaveBatch(ctx context.Context, requestItems []*domain.Batc
 		}
 
 		responseItems = append(responseItems, &domain.BatchResponseItem{
-			CorelationID: requestItem.CorelationID,
-			Key:          key,
+			CorrelationID: requestItem.CorrelationID,
+			Key:           key,
 		})
 	}
 

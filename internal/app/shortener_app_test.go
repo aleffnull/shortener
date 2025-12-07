@@ -30,6 +30,7 @@ func TestShortenerApp_GetURL(t *testing.T) {
 	shortener := NewShortenerApp(
 		mock.Connection,
 		mock.Store,
+		mock.DeleteURLsService,
 		mock.AuditService,
 		mock.Logger,
 		mock.AppParameters,
@@ -104,6 +105,7 @@ func TestShortenerApp_ShortenURL(t *testing.T) {
 			shortener := NewShortenerApp(
 				mock.Connection,
 				mock.Store,
+				mock.DeleteURLsService,
 				mock.AuditService,
 				mock.Logger,
 				mock.AppParameters,
