@@ -13,7 +13,6 @@ import (
 
 type StoreManager interface {
 	Init() error
-	Shutdown()
 	CheckAvailability(context.Context) error
 }
 

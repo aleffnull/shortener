@@ -1,56 +1,114 @@
 package store
 
 import (
-	"math/rand/v2"
-	"strings"
+	"context"
 	"testing"
+
+	"github.com/aleffnull/shortener/internal/config"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func BenchmarkRandomString(b *testing.B) {
-	const length = 1000
+func Test_saveWithUniqueKey(t *testing.T) {
+	t.Parallel()
 
-	b.Run("by array", func(b *testing.B) {
-		for b.Loop() {
-			_ = randomStringByBuffer(length)
-		}
-	})
-
-	b.Run("by concatenation", func(b *testing.B) {
-		for b.Loop() {
-			_ = randomStringByConcatenation(length)
-		}
-	})
-
-	b.Run("by string builder", func(b *testing.B) {
-		for b.Loop() {
-			_ = randomStringByStringBuilder(length)
-		}
-	})
-}
-
-func randomStringByBuffer(length int) string {
-	var arr = make([]byte, length)
-	for i := range arr {
-		arr[i] = alphabet[rand.IntN(len(alphabet))]
+	type args struct {
+		configuration *config.KeyStoreConfiguration
+		value         string
+		saver         saverFunc
 	}
 
-	return string(arr)
-}
-
-func randomStringByConcatenation(length int) string {
-	result := ""
-	for range length {
-		result += string(alphabet[rand.IntN(len(alphabet))])
+	tests := []struct {
+		name          string
+		args          *args
+		wantError     bool
+		wantKeyLength int
+	}{
+		{
+			name: "WHEN saver error THEN error",
+			args: &args{
+				configuration: &config.KeyStoreConfiguration{
+					KeyLength:        1,
+					KeyMaxLength:     2,
+					KeyMaxIterations: 1,
+				},
+				value: "foo",
+				saver: func(_ context.Context, _ string, _ string) (bool, error) {
+					return false, assert.AnError
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "WHEN always exists THEN error",
+			args: &args{
+				configuration: &config.KeyStoreConfiguration{
+					KeyLength:        1,
+					KeyMaxLength:     2,
+					KeyMaxIterations: 1,
+				},
+				value: "foo",
+				saver: func(_ context.Context, _ string, _ string) (bool, error) {
+					return true, nil
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "WHEN not existing key THEN ok",
+			args: &args{
+				configuration: &config.KeyStoreConfiguration{
+					KeyLength:        1,
+					KeyMaxLength:     2,
+					KeyMaxIterations: 1,
+				},
+				value: "foo",
+				saver: func(_ context.Context, _ string, _ string) (bool, error) {
+					return false, nil
+				},
+			},
+			wantKeyLength: 1,
+		},
+		{
+			name: "WHEN short key exists THEN key length is doubled",
+			args: &args{
+				configuration: &config.KeyStoreConfiguration{
+					KeyLength:        1,
+					KeyMaxLength:     10,
+					KeyMaxIterations: 1,
+				},
+				value: "foo",
+				saver: func(_ context.Context, key string, _ string) (bool, error) {
+					return len(key) <= 1, nil
+				},
+			},
+			wantKeyLength: 2,
+		},
 	}
 
-	return result
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			keyStore := &keyStore{
+				configuration: tt.args.configuration,
+			}
+
+			key, err := keyStore.saveWithUniqueKey(context.Background(), tt.args.value, tt.args.saver)
+			if tt.wantError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, len(key), tt.wantKeyLength)
+		})
+	}
 }
 
-func randomStringByStringBuilder(length int) string {
-	sb := strings.Builder{}
-	for range length {
-		sb.WriteByte(alphabet[rand.IntN(len(alphabet))])
-	}
+func Test_randomString(t *testing.T) {
+	t.Parallel()
 
-	return sb.String()
+	str := randomString(10)
+	require.Len(t, str, 10)
 }

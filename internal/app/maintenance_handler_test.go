@@ -13,13 +13,15 @@ import (
 )
 
 func TestMaintenanceHandler_HandlePingRequest(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name       string
 		statusCode int
 		hookBefore func(mock *mocks.Mock)
 	}{
 		{
-			name:       "database error",
+			name:       "WHEN database error THEN internal error",
 			statusCode: http.StatusInternalServerError,
 			hookBefore: func(mock *mocks.Mock) {
 				mock.App.EXPECT().CheckStore(gomock.Any()).Return(assert.AnError)
@@ -27,7 +29,7 @@ func TestMaintenanceHandler_HandlePingRequest(t *testing.T) {
 			},
 		},
 		{
-			name:       "ok",
+			name:       "WHEN no errors THEN ok",
 			statusCode: http.StatusOK,
 			hookBefore: func(mock *mocks.Mock) {
 				mock.App.EXPECT().CheckStore(gomock.Any()).Return(nil)
@@ -37,6 +39,8 @@ func TestMaintenanceHandler_HandlePingRequest(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(http.MethodGet, "/ping", nil)
 			ctrl := gomock.NewController(t)
