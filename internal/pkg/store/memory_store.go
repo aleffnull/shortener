@@ -57,10 +57,6 @@ func (s *MemoryStore) Init() error {
 	return nil
 }
 
-func (s *MemoryStore) Shutdown() {
-	// Do nothing.
-}
-
 func (s *MemoryStore) CheckAvailability(context.Context) error {
 	return nil
 }

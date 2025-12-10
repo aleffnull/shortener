@@ -44,10 +44,6 @@ func (s *DatabaseStore) Init() error {
 	return nil
 }
 
-func (s *DatabaseStore) Shutdown() {
-	//
-}
-
 func (s *DatabaseStore) CheckAvailability(ctx context.Context) error {
 	err := s.connection.Ping(ctx)
 	if err != nil {

@@ -73,7 +73,6 @@ func (s *ShortenerApp) Init(ctx context.Context) error {
 func (s *ShortenerApp) Shutdown() {
 	s.deleteURLsService.Shutdown()
 	s.auditService.Shutdown()
-	s.storage.Shutdown()
 	s.connection.Shutdown()
 }
 
