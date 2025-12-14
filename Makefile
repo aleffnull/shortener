@@ -10,6 +10,9 @@ clean:
 build:
 	go build -v -o=$(EXE) ./cmd/shortener/...
 
+build_linter:
+	go build -v -o=bin/linter ./cmd/linter/...
+
 run:
 	go run ./cmd/shortener/...
 
@@ -66,3 +69,6 @@ coverage: calc_coverage
 
 coverage_html: coverage
 	go tool cover -html=cover.out
+
+lint: build_linter
+	bin/linter ./...
