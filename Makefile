@@ -13,6 +13,9 @@ build:
 build_linter:
 	go build -v -o=bin/linter ./cmd/linter/...
 
+build_resetter:
+	go build -v -o=bin/resetter ./cmd/resetter/...
+
 run:
 	go run ./cmd/shortener/...
 
@@ -72,3 +75,7 @@ coverage_html: coverage
 
 lint: build_linter
 	bin/linter ./...
+
+generate: build_resetter
+	bin/resetter .
+
