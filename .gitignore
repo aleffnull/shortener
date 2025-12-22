@@ -25,4 +25,3 @@ vendor/
 
 # Project artifacts
 *.jsonl
-*.gen.go
