@@ -22,6 +22,13 @@ import (
 	"github.com/aleffnull/shortener/internal/pkg/store"
 	"github.com/aleffnull/shortener/internal/repository"
 	"github.com/aleffnull/shortener/internal/service"
+	"github.com/samber/lo"
+)
+
+var (
+	BuildVersion string
+	BuildDate    string
+	BuildCommit  string
 )
 
 func NewShortenerApp(
@@ -100,6 +107,10 @@ func NewHTTPServer(
 }
 
 func main() {
+	fmt.Printf("Build version: %v\n", getValueOrNA(BuildVersion))
+	fmt.Printf("Build date: %v\n", getValueOrNA(BuildDate))
+	fmt.Printf("Build commit: %v\n", getValueOrNA(BuildCommit))
+
 	fx.New(
 		fx.Provide(
 			zap.NewDevelopment,
@@ -177,4 +188,8 @@ func collectMemoryProfile(filePath string) (err error) {
 	}
 
 	return nil
+}
+
+func getValueOrNA(value string) string {
+	return lo.Ternary(len(value) == 0, "N/A", value)
 }

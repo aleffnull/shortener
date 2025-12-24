@@ -3,6 +3,9 @@ TEST_EXE = shortenertest
 PORT = 8842
 FILE_STORAGE = /tmp/shortener.jsonl
 DATABASE_CONN_STRING = postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable
+BUILD_VERSION = v1.0.0
+BUILD_DATE = $(shell date +'%F %T %Z')
+BUILD_COMMIT = $(shell git rev-parse HEAD)
 
 clean:
 	rm -rf bin/
@@ -10,8 +13,18 @@ clean:
 build:
 	go build -v -o=$(EXE) ./cmd/shortener/...
 
+build_linter:
+	go build -v -o=bin/linter ./cmd/linter/...
+
+build_resetter:
+	go build -v -o=bin/resetter ./cmd/resetter/...
+
 run:
-	go run ./cmd/shortener/...
+	go run -ldflags " \
+	    -X main.BuildVersion=$(BUILD_VERSION) \
+	    -X 'main.BuildDate=$(BUILD_DATE)' \
+	    -X main.BuildCommit=$(BUILD_COMMIT) \
+	  " ./cmd/shortener/...
 
 mock:
 	mockgen -source internal/app/app.go -destination internal/pkg/mocks/mock_app.go -package mocks
@@ -66,3 +79,10 @@ coverage: calc_coverage
 
 coverage_html: coverage
 	go tool cover -html=cover.out
+
+lint: build_linter
+	bin/linter ./...
+
+generate: build_resetter
+	bin/resetter .
+

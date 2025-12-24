@@ -24,19 +24,22 @@ func ExampleAPIHandler_HandleAPIRequest() {
 
 	data, err := json.Marshal(request)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 
 	responseData, err := http.Post("http://localhost:8080/api/shorten", mimetype.ApplicationJSON, bytes.NewBuffer(data))
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 
 	defer responseData.Body.Close()
 
 	response := shortenResponse{}
 	if err := json.NewDecoder(responseData.Body).Decode(&response); err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 
 	fmt.Printf("Status code: %v\n", responseData.StatusCode)

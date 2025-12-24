@@ -70,18 +70,6 @@ func (mr *MockStoreManagerMockRecorder) Init() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockStoreManager)(nil).Init))
 }
 
-// Shutdown mocks base method.
-func (m *MockStoreManager) Shutdown() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Shutdown")
-}
-
-// Shutdown indicates an expected call of Shutdown.
-func (mr *MockStoreManagerMockRecorder) Shutdown() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Shutdown", reflect.TypeOf((*MockStoreManager)(nil).Shutdown))
-}
-
 // MockDataStore is a mock of DataStore interface.
 type MockDataStore struct {
 	ctrl     *gomock.Controller
@@ -304,18 +292,6 @@ func (m *MockStore) SaveBatch(arg0 context.Context, arg1 []*domain.BatchRequestI
 func (mr *MockStoreMockRecorder) SaveBatch(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveBatch", reflect.TypeOf((*MockStore)(nil).SaveBatch), arg0, arg1, arg2)
-}
-
-// Shutdown mocks base method.
-func (m *MockStore) Shutdown() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Shutdown")
-}
-
-// Shutdown indicates an expected call of Shutdown.
-func (mr *MockStoreMockRecorder) Shutdown() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Shutdown", reflect.TypeOf((*MockStore)(nil).Shutdown))
 }
 
 // MockColdStore is a mock of ColdStore interface.
