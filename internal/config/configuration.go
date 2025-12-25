@@ -74,10 +74,7 @@ func GetConfiguration() (*Configuration, error) {
 		return nil, fmt.Errorf("failed to parse environment variables: %w", err)
 	}
 
-	flagConfig, err := parseFlags()
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse flags: %w", err)
-	}
+	flagConfig := parseFlags()
 
 	configuration := &Configuration{
 		ServerAddress: lo.Ternary(len(envConfig.ServerAddress) > 0, envConfig.ServerAddress, flagConfig.ServerAddress),
@@ -108,7 +105,7 @@ func GetConfiguration() (*Configuration, error) {
 	return configuration, nil
 }
 
-func parseFlags() (*Configuration, error) {
+func parseFlags() *Configuration {
 	configuration := &Configuration{
 		FileStore:     &FileStoreConfiguration{},
 		DatabaseStore: &DatabaseStoreConfiguration{},
@@ -124,7 +121,7 @@ func parseFlags() (*Configuration, error) {
 	flag.StringVar(&configuration.MemoryProfile, "memory-profile", "", "path to memory profile file")
 	flag.Parse()
 
-	return configuration, nil
+	return configuration
 }
 
 func parseEnvironment() (*Configuration, error) {

@@ -258,7 +258,7 @@ func TestHandler_HandlePostRequest(t *testing.T) {
 			defer result.Body.Close()
 			resultBody, err := io.ReadAll(result.Body)
 			require.NoError(t, err)
-			require.NotEmpty(t, body)
+			require.NotEmpty(t, resultBody)
 
 			if tt.want.validateURL {
 				_, err = url.ParseRequestURI(string(resultBody))
