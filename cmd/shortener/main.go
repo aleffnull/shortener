@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"runtime"
@@ -64,10 +63,12 @@ func NewHTTPServer(
 	router *app.Router,
 	configuration *config.Configuration,
 	log logger.Logger,
+	stdLogProvider logger.StdLogProvider,
 ) *http.Server {
 	srv := &http.Server{
-		Addr:    configuration.ServerAddress,
-		Handler: router.NewMuxHandler(),
+		Addr:     configuration.ServerAddress,
+		Handler:  router.NewMuxHandler(),
+		ErrorLog: stdLogProvider.GetStdLog(),
 	}
 	var cpuProfile *os.File
 	lc.Append(fx.Hook{
@@ -78,14 +79,20 @@ func NewHTTPServer(
 				cpuProfile = cpu
 			}
 
-			listener, err := net.Listen("tcp", srv.Addr)
-			if err != nil {
-				return err
-			}
-
 			log.Infof("Using configuration: %v", configuration)
-			log.Infof("Starting HTTP server on %v", srv.Addr)
-			go srv.Serve(listener)
+			log.Infof("Starting HTTP%v server on %v", lo.Ternary(configuration.HTTPS.Enabled, "S", ""), srv.Addr)
+
+			go func() {
+				err := lo.Ternary(
+					configuration.HTTPS.Enabled,
+					srv.ListenAndServeTLS(configuration.HTTPS.CertificateFile, configuration.HTTPS.KeyFile),
+					srv.ListenAndServe(),
+				)
+				if err != nil && !errors.Is(err, http.ErrServerClosed) {
+					log.Fatalf("Server start error: %v", err)
+				}
+			}()
+
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
@@ -115,6 +122,7 @@ func main() {
 		fx.Provide(
 			zap.NewDevelopment,
 			logger.NewZapLogger,
+			logger.NewStdLogProvider,
 			config.GetConfiguration,
 			repository.NewConnection,
 			store.NewFileStore,

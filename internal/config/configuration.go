@@ -18,6 +18,7 @@ type Configuration struct {
 	MemoryStore   *MemoryStoreConfiguration   `validate:"required"`
 	FileStore     *FileStoreConfiguration     `validate:"required"`
 	DatabaseStore *DatabaseStoreConfiguration `validate:"required"`
+	HTTPS         *HTTPSConfiguration         `validate:"required"`
 	CPUProfile    string                      `env:"CPU_PROFILE" validate:"omitempty,filepath"`
 	MemoryProfile string                      `env:"MEMORY_PROFILE" validate:"omitempty,filepath"`
 }
@@ -64,6 +65,12 @@ func (c *Configuration) String() string {
 		fmt.Fprintf(sb, " DatabaseStore:%v", c.DatabaseStore)
 	}
 
+	if c.HTTPS == nil {
+		fmt.Fprintf(sb, " HTTPS:<nil>")
+	} else {
+		fmt.Fprintf(sb, " HTTPS:%v", c.HTTPS)
+	}
+
 	fmt.Fprintf(sb, "}")
 	return sb.String()
 }
@@ -93,6 +100,17 @@ func GetConfiguration() (*Configuration, error) {
 			envConfig.DatabaseStore.DataSourceName,
 			flagConfig.DatabaseStore.DataSourceName,
 		)),
+		HTTPS: &HTTPSConfiguration{
+			Enabled: envConfig.HTTPS.Enabled || flagConfig.HTTPS.Enabled,
+			CertificateFile: lo.Ternary(
+				len(envConfig.HTTPS.CertificateFile) > 0,
+				envConfig.HTTPS.CertificateFile,
+				flagConfig.HTTPS.CertificateFile),
+			KeyFile: lo.Ternary(
+				len(envConfig.HTTPS.KeyFile) > 0,
+				envConfig.HTTPS.KeyFile,
+				flagConfig.HTTPS.KeyFile),
+		},
 		CPUProfile:    lo.Ternary(len(envConfig.CPUProfile) > 0, envConfig.CPUProfile, flagConfig.CPUProfile),
 		MemoryProfile: lo.Ternary(len(envConfig.MemoryProfile) > 0, envConfig.MemoryProfile, flagConfig.MemoryProfile),
 	}
@@ -109,6 +127,7 @@ func parseFlags() *Configuration {
 	configuration := &Configuration{
 		FileStore:     &FileStoreConfiguration{},
 		DatabaseStore: &DatabaseStoreConfiguration{},
+		HTTPS:         &HTTPSConfiguration{},
 	}
 
 	flag.StringVar(&configuration.ServerAddress, "a", "localhost:8080", "address and port of running server")
@@ -117,6 +136,9 @@ func parseFlags() *Configuration {
 	flag.StringVar(&configuration.AuditURL, "audit-url", "", "audit endpoint URL")
 	flag.StringVar(&configuration.FileStore.FilePath, "f", "shortener.jsonl", "path to storage file")
 	flag.StringVar(&configuration.DatabaseStore.DataSourceName, "d", "", "data source name")
+	flag.BoolVar(&configuration.HTTPS.Enabled, "s", false, "use HTTPS")
+	flag.StringVar(&configuration.HTTPS.CertificateFile, "cert-file", "", "HTTP certificate file")
+	flag.StringVar(&configuration.HTTPS.KeyFile, "key-file", "", "HTTP key file")
 	flag.StringVar(&configuration.CPUProfile, "cpu-profile", "", "path to CPU profile file")
 	flag.StringVar(&configuration.MemoryProfile, "memory-profile", "", "path to memory profile file")
 	flag.Parse()
@@ -128,6 +150,7 @@ func parseEnvironment() (*Configuration, error) {
 	configuration := &Configuration{
 		FileStore:     &FileStoreConfiguration{},
 		DatabaseStore: &DatabaseStoreConfiguration{},
+		HTTPS:         &HTTPSConfiguration{},
 	}
 	err := env.Parse(configuration)
 

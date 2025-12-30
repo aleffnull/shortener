@@ -25,3 +25,5 @@ vendor/
 
 # Project artifacts
 *.jsonl
+tls/*.crt
+tls/*.key
