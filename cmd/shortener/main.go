@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"runtime/pprof"
+	"syscall"
 
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
@@ -43,6 +45,7 @@ func NewShortenerApp(
 	shortener := app.NewShortenerApp(connection, storage, deleteURLsService, auditService, log, parameters, configuration)
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
+			log.Infof("Start application")
 			err := shortener.Init(ctx)
 			if err != nil {
 				return fmt.Errorf("application initialization failed: %w", err)
@@ -50,6 +53,7 @@ func NewShortenerApp(
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
+			log.Infof("Stop application")
 			shortener.Shutdown()
 			return nil
 		},
@@ -106,6 +110,7 @@ func NewHTTPServer(
 				log.Errorf("failed to collect memory profile: %w", err)
 			}
 
+			log.Infof("Stop server")
 			return srv.Shutdown(ctx)
 		},
 	})
@@ -144,7 +149,9 @@ func main() {
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: log}
 		}),
-		fx.Invoke(func(*http.Server) {}),
+		fx.Invoke(func(_ *http.Server, logger logger.Logger, shutdowner fx.Shutdowner) {
+			connectToSignals(logger, shutdowner)
+		}),
 	).Run()
 }
 
@@ -200,4 +207,17 @@ func collectMemoryProfile(filePath string) (err error) {
 
 func getValueOrNA(value string) string {
 	return lo.Ternary(len(value) == 0, "N/A", value)
+}
+
+func connectToSignals(logger logger.Logger, shutdowner fx.Shutdowner) {
+	signalCh := make(chan os.Signal, 1)
+	// syscall.SIGTERM и syscall.SIGINT обрабатываются контейнером Uber FX.
+	signal.Notify(signalCh, syscall.SIGQUIT)
+	go func() {
+		for {
+			sig := <-signalCh
+			logger.Infof("Got OS signal '%v'", sig)
+			shutdowner.Shutdown()
+		}
+	}()
 }
