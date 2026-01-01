@@ -1,8 +1,10 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/caarlos0/env/v6"
@@ -21,6 +23,7 @@ type Configuration struct {
 	HTTPS         *HTTPSConfiguration         `validate:"required"`
 	CPUProfile    string                      `env:"CPU_PROFILE" validate:"omitempty,filepath"`
 	MemoryProfile string                      `env:"MEMORY_PROFILE" validate:"omitempty,filepath"`
+	ConfigFile    string                      `env:"CONFIG"`
 }
 
 func (c *Configuration) String() string {
@@ -71,6 +74,10 @@ func (c *Configuration) String() string {
 		fmt.Fprintf(sb, " HTTPS:%v", c.HTTPS)
 	}
 
+	if len(c.ConfigFile) > 0 {
+		fmt.Fprintf(sb, " ConfigFile:%v", c.ConfigFile)
+	}
+
 	fmt.Fprintf(sb, "}")
 	return sb.String()
 }
@@ -82,38 +89,47 @@ func GetConfiguration() (*Configuration, error) {
 	}
 
 	flagConfig := parseFlags()
+	fileConfig, err := parseFile(envConfig, flagConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse configuration file: %w", err)
+	}
 
 	configuration := &Configuration{
-		ServerAddress: lo.Ternary(len(envConfig.ServerAddress) > 0, envConfig.ServerAddress, flagConfig.ServerAddress),
-		BaseURL:       lo.Ternary(len(envConfig.BaseURL) > 0, envConfig.BaseURL, flagConfig.BaseURL),
-		AuditFile:     lo.Ternary(len(envConfig.AuditFile) > 0, envConfig.AuditFile, flagConfig.AuditFile),
-		AuditURL:      lo.Ternary(len(envConfig.AuditURL) > 0, envConfig.AuditURL, flagConfig.AuditURL),
+		ServerAddress: getStringValue(envConfig.ServerAddress, flagConfig.ServerAddress, fileConfig.ServerAddress),
+		BaseURL:       getStringValue(envConfig.BaseURL, flagConfig.BaseURL, fileConfig.BaseURL),
+		AuditFile:     getStringValue(envConfig.AuditFile, flagConfig.AuditFile, fileConfig.AuditFile),
+		AuditURL:      getStringValue(envConfig.AuditURL, flagConfig.AuditURL, fileConfig.AuditURL),
 		MemoryStore:   defaultMemoryStoreConfiguration(),
 		FileStore: &FileStoreConfiguration{
-			FilePath: lo.Ternary(
-				len(envConfig.FileStore.FilePath) > 0,
+			FilePath: getStringValue(
 				envConfig.FileStore.FilePath,
-				flagConfig.FileStore.FilePath),
+				flagConfig.FileStore.FilePath,
+				fileConfig.FileStore.FilePath,
+			),
 		},
-		DatabaseStore: NewDatabaseStoreConfiguration(lo.Ternary(
-			len(envConfig.DatabaseStore.DataSourceName) > 0,
-			envConfig.DatabaseStore.DataSourceName,
-			flagConfig.DatabaseStore.DataSourceName,
-		)),
+		DatabaseStore: NewDatabaseStoreConfiguration(
+			getStringValue(
+				envConfig.DatabaseStore.DataSourceName,
+				flagConfig.DatabaseStore.DataSourceName,
+				fileConfig.DatabaseStore.DataSourceName,
+			)),
 		HTTPS: &HTTPSConfiguration{
-			Enabled: envConfig.HTTPS.Enabled || flagConfig.HTTPS.Enabled,
-			CertificateFile: lo.Ternary(
-				len(envConfig.HTTPS.CertificateFile) > 0,
+			Enabled: envConfig.HTTPS.Enabled || flagConfig.HTTPS.Enabled || fileConfig.HTTPS.Enabled,
+			CertificateFile: getStringValue(
 				envConfig.HTTPS.CertificateFile,
-				flagConfig.HTTPS.CertificateFile),
-			KeyFile: lo.Ternary(
-				len(envConfig.HTTPS.KeyFile) > 0,
+				flagConfig.HTTPS.CertificateFile,
+				fileConfig.HTTPS.CertificateFile,
+			),
+			KeyFile: getStringValue(
 				envConfig.HTTPS.KeyFile,
-				flagConfig.HTTPS.KeyFile),
+				flagConfig.HTTPS.KeyFile,
+				fileConfig.HTTPS.KeyFile,
+			),
 		},
-		CPUProfile:    lo.Ternary(len(envConfig.CPUProfile) > 0, envConfig.CPUProfile, flagConfig.CPUProfile),
-		MemoryProfile: lo.Ternary(len(envConfig.MemoryProfile) > 0, envConfig.MemoryProfile, flagConfig.MemoryProfile),
+		CPUProfile:    getStringValue(envConfig.CPUProfile, flagConfig.CPUProfile, fileConfig.CPUProfile),
+		MemoryProfile: getStringValue(envConfig.MemoryProfile, flagConfig.MemoryProfile, fileConfig.MemoryProfile),
 	}
+
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	err = validate.Struct(configuration)
 	if err != nil {
@@ -141,6 +157,7 @@ func parseFlags() *Configuration {
 	flag.StringVar(&configuration.HTTPS.KeyFile, "key-file", "", "HTTP key file")
 	flag.StringVar(&configuration.CPUProfile, "cpu-profile", "", "path to CPU profile file")
 	flag.StringVar(&configuration.MemoryProfile, "memory-profile", "", "path to memory profile file")
+	flag.StringVar(&configuration.ConfigFile, "config", "", "path to configuration file")
 	flag.Parse()
 
 	return configuration
@@ -155,4 +172,59 @@ func parseEnvironment() (*Configuration, error) {
 	err := env.Parse(configuration)
 
 	return configuration, err
+}
+
+func parseFile(envConfig *Configuration, flagConfig *Configuration) (*Configuration, error) {
+	configFile := lo.Ternary(len(envConfig.ConfigFile) > 0, envConfig.ConfigFile, flagConfig.ConfigFile)
+	if len(configFile) == 0 {
+		return &Configuration{
+			FileStore:     &FileStoreConfiguration{},
+			DatabaseStore: &DatabaseStoreConfiguration{},
+			HTTPS:         &HTTPSConfiguration{},
+		}, nil
+	}
+
+	jsonBytes, err := os.ReadFile(configFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file '%v': %w", configFile, err)
+	}
+
+	configurationFile := &ConfigurationFile{}
+	if err := json.Unmarshal(jsonBytes, configurationFile); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON from config file '%v': %w", configFile, err)
+	}
+
+	configuration := &Configuration{
+		ServerAddress: configurationFile.ServerAddress,
+		BaseURL:       configurationFile.BaseURL,
+		AuditFile:     configurationFile.AuditFile,
+		AuditURL:      configurationFile.AuditURL,
+		FileStore: &FileStoreConfiguration{
+			FilePath: configurationFile.FileStoreFilePath,
+		},
+		DatabaseStore: &DatabaseStoreConfiguration{
+			DataSourceName: configurationFile.DatabaseStoreDataSourceName,
+		},
+		HTTPS: &HTTPSConfiguration{
+			Enabled:         configurationFile.HTTPSEnabled,
+			CertificateFile: configurationFile.HTTPSCertificateFile,
+			KeyFile:         configurationFile.HTTPSKeyFile,
+		},
+		CPUProfile:    configurationFile.CPUProfile,
+		MemoryProfile: configurationFile.MemoryProfile,
+	}
+
+	return configuration, nil
+}
+
+func getStringValue(envValue string, flagValue string, fileValue string) string {
+	if len(envValue) > 0 {
+		return envValue
+	}
+
+	if len(flagValue) > 0 {
+		return flagValue
+	}
+
+	return fileValue
 }
