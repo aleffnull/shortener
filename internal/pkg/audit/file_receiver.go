@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/domain"
 )
 
 type FileReceiver struct {
@@ -20,7 +21,7 @@ func NewFileReceiver(configuration *config.Configuration) *FileReceiver {
 	}
 }
 
-func (r *FileReceiver) AddEvent(event *Event) error {
+func (r *FileReceiver) AddEvent(event *domain.AuditEvent) error {
 	if len(r.auditFile) == 0 {
 		return nil
 	}

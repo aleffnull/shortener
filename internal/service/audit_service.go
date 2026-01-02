@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 
+	"github.com/aleffnull/shortener/internal/domain"
 	"github.com/aleffnull/shortener/internal/pkg/audit"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 )
@@ -10,13 +11,13 @@ import (
 type AuditService interface {
 	Init()
 	Shutdown()
-	AuditEvent(event *audit.Event)
+	AuditEvent(event *domain.AuditEvent)
 }
 
 type auditServiceImpl struct {
 	receivers   []audit.Receiver
 	logger      logger.Logger
-	auditCh     chan *audit.Event
+	auditCh     chan *domain.AuditEvent
 	stopWorkers context.CancelFunc
 }
 
@@ -34,7 +35,7 @@ func NewAuditService(receivers []audit.Receiver, logger logger.Logger) AuditServ
 	return &auditServiceImpl{
 		receivers: receivers,
 		logger:    logger,
-		auditCh:   make(chan *audit.Event, channelSize),
+		auditCh:   make(chan *domain.AuditEvent, channelSize),
 	}
 }
 
@@ -50,7 +51,7 @@ func (i *auditServiceImpl) Shutdown() {
 	i.stopWorkers()
 }
 
-func (i *auditServiceImpl) AuditEvent(event *audit.Event) {
+func (i *auditServiceImpl) AuditEvent(event *domain.AuditEvent) {
 	i.auditCh <- event
 }
 

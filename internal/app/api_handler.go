@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/aleffnull/shortener/internal/domain"
 	"github.com/aleffnull/shortener/internal/middleware"
-	"github.com/aleffnull/shortener/internal/pkg/audit"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/utils"
 	"github.com/aleffnull/shortener/internal/service"
@@ -64,9 +64,9 @@ func (h *APIHandler) HandleAPIRequest(response http.ResponseWriter, request *htt
 	}
 
 	if !shortenerResponse.IsDuplicate {
-		h.auditService.AuditEvent(&audit.Event{
-			Timestamp: audit.FormattedTime(time.Now()),
-			Action:    audit.ActionShorten,
+		h.auditService.AuditEvent(&domain.AuditEvent{
+			Timestamp: domain.AuditFormattedTime(time.Now()),
+			Action:    domain.AuditActionShorten,
 			UserID:    userID,
 			URL:       shortenRequest.URL,
 		})

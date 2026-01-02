@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/aleffnull/shortener/internal/domain"
 	"github.com/aleffnull/shortener/internal/middleware"
-	"github.com/aleffnull/shortener/internal/pkg/audit"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/utils"
 	"github.com/aleffnull/shortener/internal/service"
@@ -59,9 +59,9 @@ func (h *SimpleAPIHandler) HandleGetRequest(response http.ResponseWriter, reques
 	response.Header().Set(headers.Location, item.URL)
 	response.WriteHeader(http.StatusTemporaryRedirect)
 
-	h.auditService.AuditEvent(&audit.Event{
-		Timestamp: audit.FormattedTime(time.Now()),
-		Action:    audit.ActionFollow,
+	h.auditService.AuditEvent(&domain.AuditEvent{
+		Timestamp: domain.AuditFormattedTime(time.Now()),
+		Action:    domain.AuditActionFollow,
 		UserID:    item.UserID,
 		URL:       item.URL,
 	})
@@ -97,9 +97,9 @@ func (h *SimpleAPIHandler) HandlePostRequest(response http.ResponseWriter, reque
 	fmt.Fprint(response, shortenerResponse.Result)
 
 	if !shortenerResponse.IsDuplicate {
-		h.auditService.AuditEvent(&audit.Event{
-			Timestamp: audit.FormattedTime(time.Now()),
-			Action:    audit.ActionShorten,
+		h.auditService.AuditEvent(&domain.AuditEvent{
+			Timestamp: domain.AuditFormattedTime(time.Now()),
+			Action:    domain.AuditActionShorten,
 			UserID:    userID,
 			URL:       longURL,
 		})

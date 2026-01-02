@@ -9,6 +9,7 @@ import (
 	"github.com/ldez/mimetype"
 
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/domain"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 )
 
@@ -26,7 +27,7 @@ func NewEndpointReceiver(configuration *config.Configuration, logger logger.Logg
 	}
 }
 
-func (r *EndpointReceiver) AddEvent(event *Event) error {
+func (r *EndpointReceiver) AddEvent(event *domain.AuditEvent) error {
 	if len(r.auditURL) == 0 {
 		return nil
 	}
