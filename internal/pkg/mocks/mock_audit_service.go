@@ -12,7 +12,7 @@ package mocks
 import (
 	reflect "reflect"
 
-	audit "github.com/aleffnull/shortener/internal/pkg/audit"
+	domain "github.com/aleffnull/shortener/internal/domain"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -41,7 +41,7 @@ func (m *MockAuditService) EXPECT() *MockAuditServiceMockRecorder {
 }
 
 // AuditEvent mocks base method.
-func (m *MockAuditService) AuditEvent(event *audit.Event) {
+func (m *MockAuditService) AuditEvent(event *domain.AuditEvent) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "AuditEvent", event)
 }

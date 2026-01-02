@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aleffnull/shortener/internal/pkg/audit"
+	"github.com/aleffnull/shortener/internal/domain"
 	"github.com/aleffnull/shortener/internal/pkg/mocks"
 	"github.com/aleffnull/shortener/internal/pkg/utils"
 	"github.com/aleffnull/shortener/models"
@@ -119,9 +119,9 @@ func TestAPIHandler_HandleAPIRequest(t *testing.T) {
 				mock.App.EXPECT().ShortenURL(gomock.Any(), args.shortenRequest, gomock.Any()).Return(&models.ShortenResponse{
 					Result: shortURL,
 				}, nil)
-				mock.AuditService.EXPECT().AuditEvent(gomock.Any()).DoAndReturn(func(event *audit.Event) {
+				mock.AuditService.EXPECT().AuditEvent(gomock.Any()).DoAndReturn(func(event *domain.AuditEvent) {
 					require.LessOrEqual(t, event.Timestamp, time.Now())
-					require.Equal(t, audit.ActionShorten, event.Action)
+					require.Equal(t, domain.AuditActionShorten, event.Action)
 					require.Equal(t, uuid.UUID{}, event.UserID)
 					require.Equal(t, args.shortenRequest.URL, event.URL)
 				})
