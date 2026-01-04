@@ -51,6 +51,7 @@ func TestConfiguration_String(t *testing.T) {
 				},
 				CPUProfile:    "profiles/cpu.pprof",
 				MemoryProfile: "profiles/memory.pprof",
+				TrustedSubnet: "192.168.1.0/24",
 				ConfigFile:    "config.json",
 			},
 		},

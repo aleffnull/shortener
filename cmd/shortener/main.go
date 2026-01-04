@@ -143,6 +143,7 @@ func main() {
 			app.NewSimpleAPIHandler,
 			app.NewAPIHandler,
 			app.NewUserHandler,
+			app.NewInternalHandler,
 			asReceiver(audit.NewFileReceiver),
 			asReceiver(audit.NewEndpointReceiver),
 		),

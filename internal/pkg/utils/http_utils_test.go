@@ -58,3 +58,19 @@ func TestHandleUnauthorized(t *testing.T) {
 	// Assert.
 	require.Equal(t, http.StatusUnauthorized, response.Code)
 }
+
+func TestHandleForbidden(t *testing.T) {
+	t.Parallel()
+
+	// Arrange.
+	ctrl := gomock.NewController(t)
+	mock := mocks.NewMock(ctrl)
+	mock.Logger.EXPECT().Warnf(gomock.Any(), "foo")
+	response := httptest.NewRecorder()
+
+	// Act.
+	HandleForbidden(response, "foo", mock.Logger)
+
+	// Assert.
+	require.Equal(t, http.StatusForbidden, response.Code)
+}

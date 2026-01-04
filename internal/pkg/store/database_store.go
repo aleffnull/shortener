@@ -183,6 +183,22 @@ func (s *DatabaseStore) DeleteBatch(ctx context.Context, keys []string, userID u
 	return nil
 }
 
+func (s *DatabaseStore) GetStatistics(ctx context.Context) (int, int, error) {
+	var urlsCount, usersCount int
+	err := s.connection.QueryRow2(
+		ctx,
+		&urlsCount,
+		&usersCount,
+		"select count(url_key), count(distinct user_id) from urls u",
+	)
+
+	if err != nil {
+		return 0, 0, fmt.Errorf("GetStatistics, connection.QueryRow2 failed: %w", err)
+	}
+
+	return urlsCount, usersCount, nil
+}
+
 func (s *DatabaseStore) saver(ctx context.Context, executor executorFunc, key, value string, userID uuid.UUID) (bool, error) {
 	err := executor(
 		ctx,

@@ -68,6 +68,21 @@ func (mr *MockAppMockRecorder) DeleteURLs(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteURLs", reflect.TypeOf((*MockApp)(nil).DeleteURLs), arg0, arg1)
 }
 
+// GetStatistics mocks base method.
+func (m *MockApp) GetStatistics(arg0 context.Context) (*models.Statistics, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetStatistics", arg0)
+	ret0, _ := ret[0].(*models.Statistics)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetStatistics indicates an expected call of GetStatistics.
+func (mr *MockAppMockRecorder) GetStatistics(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStatistics", reflect.TypeOf((*MockApp)(nil).GetStatistics), arg0)
+}
+
 // GetURL mocks base method.
 func (m *MockApp) GetURL(arg0 context.Context, arg1 string) (*models.GetURLResponseItem, error) {
 	m.ctrl.T.Helper()

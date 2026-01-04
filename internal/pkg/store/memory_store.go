@@ -110,6 +110,10 @@ func (s *MemoryStore) DeleteBatch(context.Context, []string, uuid.UUID) error {
 	return nil
 }
 
+func (s *MemoryStore) GetStatistics(context.Context) (int, int, error) {
+	return 0, 0, nil
+}
+
 func (s *MemoryStore) saveValue(ctx context.Context, value string) (string, error) {
 	// Save to hot store.
 	key, err := s.saveWithUniqueKey(ctx, value, s.saver)

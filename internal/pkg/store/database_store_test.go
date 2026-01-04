@@ -192,3 +192,73 @@ func TestDatabaseStore_DeleteBatch(t *testing.T) {
 		})
 	}
 }
+
+func TestDatabaseStore_GetStatistics(t *testing.T) {
+	t.Parallel()
+
+	type want struct {
+		urlsCount  int
+		usersCount int
+	}
+
+	tests := []struct {
+		name       string
+		want       *want
+		wantError  bool
+		hookBefore func(mock *mocks.Mock)
+	}{
+		{
+			name:      "WHEN connection error THEN error",
+			want:      &want{},
+			wantError: true,
+			hookBefore: func(mock *mocks.Mock) {
+				mock.Connection.EXPECT().
+					QueryRow2(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(assert.AnError)
+			},
+		},
+		{
+			name: "WHEN no errors THEN ok",
+			want: &want{
+				urlsCount:  1,
+				usersCount: 2,
+			},
+			hookBefore: func(mock *mocks.Mock) {
+				mock.Connection.EXPECT().
+					QueryRow2(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, result1 *int, result2 *int, sql string, args ...any) error {
+						*result1 = 1
+						*result2 = 2
+						return nil
+					})
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange.
+			ctrl := gomock.NewController(t)
+			mock := mocks.NewMock(ctrl)
+			tt.hookBefore(mock)
+			configuration := &config.Configuration{
+				DatabaseStore: &config.DatabaseStoreConfiguration{},
+			}
+			store := NewDatabaseStore(mock.Connection, configuration, mock.Logger)
+
+			// Act.
+			urlsCount, usersCount, err := store.GetStatistics(context.Background())
+
+			// Assert.
+			require.Equal(t, tt.want.urlsCount, urlsCount)
+			require.Equal(t, tt.want.usersCount, usersCount)
+			if tt.wantError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

@@ -23,6 +23,7 @@ type Configuration struct {
 	HTTPS         *HTTPSConfiguration         `validate:"required"`
 	CPUProfile    string                      `env:"CPU_PROFILE" validate:"omitempty,filepath"`
 	MemoryProfile string                      `env:"MEMORY_PROFILE" validate:"omitempty,filepath"`
+	TrustedSubnet string                      `env:"TRUSTED_SUBNET" validate:"omitempty,cidr"`
 	ConfigFile    string                      `env:"CONFIG"`
 }
 
@@ -72,6 +73,10 @@ func (c *Configuration) String() string {
 		fmt.Fprintf(sb, " HTTPS:<nil>")
 	} else {
 		fmt.Fprintf(sb, " HTTPS:%v", c.HTTPS)
+	}
+
+	if len(c.TrustedSubnet) > 0 {
+		fmt.Fprintf(sb, " TrustedSubnet:%v", c.TrustedSubnet)
 	}
 
 	if len(c.ConfigFile) > 0 {
@@ -128,6 +133,7 @@ func GetConfiguration() (*Configuration, error) {
 		},
 		CPUProfile:    getStringValue(envConfig.CPUProfile, flagConfig.CPUProfile, fileConfig.CPUProfile),
 		MemoryProfile: getStringValue(envConfig.MemoryProfile, flagConfig.MemoryProfile, fileConfig.MemoryProfile),
+		TrustedSubnet: getStringValue(envConfig.TrustedSubnet, flagConfig.TrustedSubnet, fileConfig.TrustedSubnet),
 	}
 
 	validate := validator.New(validator.WithRequiredStructEnabled())
@@ -157,6 +163,7 @@ func parseFlags() *Configuration {
 	flag.StringVar(&configuration.HTTPS.KeyFile, "key-file", "", "HTTP key file")
 	flag.StringVar(&configuration.CPUProfile, "cpu-profile", "", "path to CPU profile file")
 	flag.StringVar(&configuration.MemoryProfile, "memory-profile", "", "path to memory profile file")
+	flag.StringVar(&configuration.TrustedSubnet, "t", "", "trusted subnet CIDR")
 	flag.StringVar(&configuration.ConfigFile, "config", "", "path to configuration file")
 	flag.Parse()
 
@@ -212,6 +219,7 @@ func parseFile(envConfig *Configuration, flagConfig *Configuration) (*Configurat
 		},
 		CPUProfile:    configurationFile.CPUProfile,
 		MemoryProfile: configurationFile.MemoryProfile,
+		TrustedSubnet: configurationFile.TrustedSubnet,
 	}
 
 	return configuration, nil

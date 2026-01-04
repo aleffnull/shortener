@@ -8,6 +8,7 @@ import (
 	cm "github.com/go-chi/chi/v5/middleware"
 	"github.com/ldez/mimetype"
 
+	"github.com/aleffnull/shortener/internal/config"
 	"github.com/aleffnull/shortener/internal/middleware"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/service"
@@ -20,8 +21,10 @@ type Router struct {
 	simpleAPIHandler     *SimpleAPIHandler
 	apiHandler           *APIHandler
 	userHandler          *UserHandler
+	internalHandler      *InternalHandler
 	authorizationService service.AuthorizationService
 	logger               logger.Logger
+	configuration        *config.Configuration
 }
 
 func NewRouter(
@@ -29,16 +32,20 @@ func NewRouter(
 	simpleAPIHandler *SimpleAPIHandler,
 	apiHandler *APIHandler,
 	userHandler *UserHandler,
+	internalHandler *InternalHandler,
 	authorizationService service.AuthorizationService,
 	logger logger.Logger,
+	configuration *config.Configuration,
 ) *Router {
 	return &Router{
 		maintenanceHandler:   maintenanceHandler,
 		simpleAPIHandler:     simpleAPIHandler,
 		apiHandler:           apiHandler,
 		userHandler:          userHandler,
+		internalHandler:      internalHandler,
 		authorizationService: authorizationService,
 		logger:               logger,
+		configuration:        configuration,
 	}
 }
 
@@ -99,6 +106,17 @@ func (r *Router) NewMuxHandler() http.Handler {
 
 		t.Get("/", r.userHandler.HandleGetUserURLsRequest)
 		t.Delete("/", r.userHandler.HandleBatchDeleteRequest)
+	})
+
+	mux.Route("/api/internal", func(t chi.Router) {
+		t.Use(func(next http.Handler) http.Handler {
+			return middleware.TrustedSubnetHandler(
+				middleware.GzipHandler(next.ServeHTTP),
+				r.configuration,
+				r.logger)
+		})
+
+		t.Get("/stats", r.internalHandler.HandleStatsRequest)
 	})
 
 	mux.Route("/debug/pprof", func(r chi.Router) {

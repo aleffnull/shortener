@@ -12,4 +12,5 @@ type ConfigurationFile struct {
 	HTTPSKeyFile                string `json:"https_key_file"`
 	CPUProfile                  string `json:"cpu_profile"`
 	MemoryProfile               string `json:"memory_profile"`
+	TrustedSubnet               string `json:"trusted_subnet"`
 }
