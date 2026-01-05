@@ -210,14 +210,15 @@ func getValueOrNA(value string) string {
 }
 
 func connectToSignals(logger logger.Logger, shutdowner fx.Shutdowner) {
-	signalCh := make(chan os.Signal, 1)
 	// syscall.SIGTERM и syscall.SIGINT обрабатываются контейнером Uber FX.
-	signal.Notify(signalCh, syscall.SIGQUIT)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGQUIT)
 	go func() {
 		for {
-			sig := <-signalCh
-			logger.Infof("Got OS signal '%v'", sig)
+			<-ctx.Done()
+			logger.Infof("Got SIGQUIT signal")
+			cancel()
 			shutdowner.Shutdown()
+			break
 		}
 	}()
 }
