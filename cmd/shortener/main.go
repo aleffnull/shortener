@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"runtime/pprof"
+	"syscall"
 
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
@@ -44,6 +45,7 @@ func NewShortenerApp(
 	shortener := app.NewShortenerApp(connection, storage, deleteURLsService, auditService, log, parameters, configuration)
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
+			log.Infof("Start application")
 			err := shortener.Init(ctx)
 			if err != nil {
 				return fmt.Errorf("application initialization failed: %w", err)
@@ -51,6 +53,7 @@ func NewShortenerApp(
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
+			log.Infof("Stop application")
 			shortener.Shutdown()
 			return nil
 		},
@@ -64,10 +67,12 @@ func NewHTTPServer(
 	router *app.Router,
 	configuration *config.Configuration,
 	log logger.Logger,
+	stdLogProvider logger.StdLogProvider,
 ) *http.Server {
 	srv := &http.Server{
-		Addr:    configuration.ServerAddress,
-		Handler: router.NewMuxHandler(),
+		Addr:     configuration.ServerAddress,
+		Handler:  router.NewMuxHandler(),
+		ErrorLog: stdLogProvider.GetStdLog(),
 	}
 	var cpuProfile *os.File
 	lc.Append(fx.Hook{
@@ -78,14 +83,20 @@ func NewHTTPServer(
 				cpuProfile = cpu
 			}
 
-			listener, err := net.Listen("tcp", srv.Addr)
-			if err != nil {
-				return err
-			}
-
 			log.Infof("Using configuration: %v", configuration)
-			log.Infof("Starting HTTP server on %v", srv.Addr)
-			go srv.Serve(listener)
+			log.Infof("Starting HTTP%v server on %v", lo.Ternary(configuration.HTTPS.Enabled, "S", ""), srv.Addr)
+
+			go func() {
+				err := lo.Ternary(
+					configuration.HTTPS.Enabled,
+					srv.ListenAndServeTLS(configuration.HTTPS.CertificateFile, configuration.HTTPS.KeyFile),
+					srv.ListenAndServe(),
+				)
+				if err != nil && !errors.Is(err, http.ErrServerClosed) {
+					log.Fatalf("Server start error: %v", err)
+				}
+			}()
+
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
@@ -99,6 +110,7 @@ func NewHTTPServer(
 				log.Errorf("failed to collect memory profile: %w", err)
 			}
 
+			log.Infof("Stop server")
 			return srv.Shutdown(ctx)
 		},
 	})
@@ -115,6 +127,7 @@ func main() {
 		fx.Provide(
 			zap.NewDevelopment,
 			logger.NewZapLogger,
+			logger.NewStdLogProvider,
 			config.GetConfiguration,
 			repository.NewConnection,
 			store.NewFileStore,
@@ -136,7 +149,9 @@ func main() {
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: log}
 		}),
-		fx.Invoke(func(*http.Server) {}),
+		fx.Invoke(func(_ *http.Server, logger logger.Logger, shutdowner fx.Shutdowner) {
+			connectToSignals(logger, shutdowner)
+		}),
 	).Run()
 }
 
@@ -192,4 +207,18 @@ func collectMemoryProfile(filePath string) (err error) {
 
 func getValueOrNA(value string) string {
 	return lo.Ternary(len(value) == 0, "N/A", value)
+}
+
+func connectToSignals(logger logger.Logger, shutdowner fx.Shutdowner) {
+	// syscall.SIGTERM и syscall.SIGINT обрабатываются контейнером Uber FX.
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGQUIT)
+	go func() {
+		for {
+			<-ctx.Done()
+			logger.Infof("Got SIGQUIT signal")
+			cancel()
+			shutdowner.Shutdown()
+			break
+		}
+	}()
 }
