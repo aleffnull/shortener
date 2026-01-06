@@ -2,6 +2,7 @@ package config
 
 type ConfigurationFile struct {
 	ServerAddress               string `json:"server_address"`
+	ServerAddressGRPC           string `json:"server_address_grpc"`
 	BaseURL                     string `json:"base_url"`
 	AuditFile                   string `json:"audit_file"`
 	AuditURL                    string `json:"audit_url"`

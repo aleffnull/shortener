@@ -32,8 +32,9 @@ const (
 type contextKey int
 
 const (
-	userIDCookieName            = "X-UserID"
-	userIDContextKey contextKey = iota
+	userIDCookieName                         = "X-UserID"
+	useIDAuthorizationMetadataKey            = "authorization"
+	userIDContextKey              contextKey = iota
 )
 
 func UserIDHandler(

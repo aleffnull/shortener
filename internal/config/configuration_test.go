@@ -22,10 +22,11 @@ func TestConfiguration_String(t *testing.T) {
 		{
 			name: "WHEN all fields THEN ok",
 			configuration: &Configuration{
-				ServerAddress: "localhost:8080",
-				BaseURL:       "http://localhost:8080",
-				AuditFile:     "audit.jsonl",
-				AuditURL:      "http://auditor/audit",
+				ServerAddress:     "localhost:8080",
+				ServerAddressGRPC: "localhost:8181",
+				BaseURL:           "http://localhost:8080",
+				AuditFile:         "audit.jsonl",
+				AuditURL:          "http://auditor/audit",
 				MemoryStore: &MemoryStoreConfiguration{
 					KeyStoreConfiguration: KeyStoreConfiguration{
 						KeyLength:        1,
