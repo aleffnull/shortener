@@ -644,3 +644,61 @@ func TestShortenerApp_CheckStore(t *testing.T) {
 		})
 	}
 }
+
+func TestShortenerApp_GetStatistics(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		want       *models.Statistics
+		wantError  bool
+		hookBefore func(mocks *mocks.Mock)
+	}{
+		{
+			name:      "WHEN storage error THEN error",
+			wantError: true,
+			hookBefore: func(mocks *mocks.Mock) {
+				mocks.Store.EXPECT().GetStatistics(gomock.Any()).Return(0, 0, assert.AnError)
+			},
+		},
+		{
+			name: "WHEN no errors THEN ok",
+			want: &models.Statistics{
+				UrlsCount:  1,
+				UsersCount: 2,
+			},
+			hookBefore: func(mocks *mocks.Mock) {
+				mocks.Store.EXPECT().GetStatistics(gomock.Any()).Return(1, 2, nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange.
+			ctrl := gomock.NewController(t)
+			mock := mocks.NewMock(ctrl)
+			tt.hookBefore(mock)
+			shortener := NewShortenerApp(
+				mock.Connection,
+				mock.Store,
+				mock.DeleteURLsService,
+				mock.AuditService,
+				mock.Logger,
+				mock.AppParameters,
+				nil,
+			)
+
+			// Act.
+			statistics, err := shortener.GetStatistics(context.Background())
+			require.Equal(t, tt.want, statistics)
+			if tt.wantError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

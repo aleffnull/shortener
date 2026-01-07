@@ -1,5 +1,7 @@
 package audit
 
+import "github.com/aleffnull/shortener/internal/domain"
+
 type Receiver interface {
-	AddEvent(event *Event) error
+	AddEvent(event *domain.AuditEvent) error
 }

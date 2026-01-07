@@ -6,7 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aleffnull/shortener/internal/pkg/audit"
+	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/domain"
 	"github.com/aleffnull/shortener/internal/pkg/mocks"
 	"github.com/aleffnull/shortener/models"
 	"github.com/go-chi/chi/v5"
@@ -26,13 +27,17 @@ func TestRouter_NewMuxHandler(t *testing.T) {
 	simpleAPIHandler := NewSimpleAPIHandler(mock.App, mock.AuditService, mock.Logger)
 	apiHandler := NewAPIHandler(mock.App, mock.AuditService, mock.Logger)
 	userHandler := NewUserHandler(mock.App, mock.Logger)
+	internalHandler := NewInternalHandler(mock.App, mock.Logger)
+	configuration := &config.Configuration{}
 	router := NewRouter(
 		maintenanceHandler,
 		simpleAPIHandler,
 		apiHandler,
 		userHandler,
+		internalHandler,
 		mock.AuthorizationService,
 		mock.Logger,
+		configuration,
 	)
 
 	// Act.
@@ -64,9 +69,9 @@ func TestRouter_ServeHTTP(t *testing.T) {
 			URL:    fullURL,
 			UserID: userID,
 		}, nil)
-	mock.AuditService.EXPECT().AuditEvent(gomock.Any()).DoAndReturn(func(event *audit.Event) {
+	mock.AuditService.EXPECT().AuditEvent(gomock.Any()).DoAndReturn(func(event *domain.AuditEvent) {
 		require.LessOrEqual(t, event.Timestamp, time.Now())
-		require.Equal(t, audit.ActionFollow, event.Action)
+		require.Equal(t, domain.AuditActionFollow, event.Action)
 		require.Equal(t, userID, event.UserID)
 		require.Equal(t, fullURL, event.URL)
 	})
@@ -76,13 +81,17 @@ func TestRouter_ServeHTTP(t *testing.T) {
 	simpleAPIHandler := NewSimpleAPIHandler(mock.App, mock.AuditService, mock.Logger)
 	apiHandler := NewAPIHandler(mock.App, mock.AuditService, mock.Logger)
 	userHandler := NewUserHandler(mock.App, mock.Logger)
+	internalHandler := NewInternalHandler(mock.App, mock.Logger)
+	configuration := &config.Configuration{}
 	router := NewRouter(
 		maintenanceHandler,
 		simpleAPIHandler,
 		apiHandler,
 		userHandler,
+		internalHandler,
 		mock.AuthorizationService,
 		mock.Logger,
+		configuration,
 	)
 
 	handler := router.NewMuxHandler()

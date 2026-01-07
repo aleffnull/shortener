@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,12 +15,16 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 
 	"github.com/aleffnull/shortener/internal/app"
 	"github.com/aleffnull/shortener/internal/config"
+	"github.com/aleffnull/shortener/internal/middleware"
 	"github.com/aleffnull/shortener/internal/pkg/audit"
+	app_grpc "github.com/aleffnull/shortener/internal/pkg/grpc"
 	"github.com/aleffnull/shortener/internal/pkg/logger"
 	"github.com/aleffnull/shortener/internal/pkg/parameters"
+	"github.com/aleffnull/shortener/internal/pkg/pb/shortener/api"
 	"github.com/aleffnull/shortener/internal/pkg/store"
 	"github.com/aleffnull/shortener/internal/repository"
 	"github.com/aleffnull/shortener/internal/service"
@@ -83,9 +88,7 @@ func NewHTTPServer(
 				cpuProfile = cpu
 			}
 
-			log.Infof("Using configuration: %v", configuration)
 			log.Infof("Starting HTTP%v server on %v", lo.Ternary(configuration.HTTPS.Enabled, "S", ""), srv.Addr)
-
 			go func() {
 				err := lo.Ternary(
 					configuration.HTTPS.Enabled,
@@ -118,6 +121,56 @@ func NewHTTPServer(
 	return srv
 }
 
+func NewGRPCServer(
+	lc fx.Lifecycle,
+	service *app_grpc.ShortenerService,
+	authorizationService service.AuthorizationService,
+	configuration *config.Configuration,
+	log logger.Logger,
+) *grpc.Server {
+	var server *grpc.Server
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			log.Infof("Starting GRPC server on %v", configuration.ServerAddressGRPC)
+			go func() {
+				// GRPC сервер не является основным, поэтому не роняем здесь сервис при ошибках.
+
+				listener, err := net.Listen("tcp", configuration.ServerAddressGRPC)
+				if err != nil {
+					log.Warnf("Failed to start listening on GRPC service port: %v", err)
+					return
+				}
+
+				interceptor := func(
+					ctx context.Context,
+					request any,
+					info *grpc.UnaryServerInfo,
+					handler grpc.UnaryHandler,
+				) (any, error) {
+					return middleware.UserIDInterceptor(ctx, request, info, handler, authorizationService, log)
+				}
+				server = grpc.NewServer(grpc.UnaryInterceptor(interceptor))
+				api.RegisterShortenerServiceServer(server, service)
+				if err = server.Serve(listener); err != nil {
+					log.Warnf("GRPC server error: %w", err)
+				}
+			}()
+
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			if server != nil {
+				log.Infof("Stop GRPC server")
+				server.Stop()
+			}
+
+			return nil
+		},
+	})
+
+	return server
+}
+
 func main() {
 	fmt.Printf("Build version: %v\n", getValueOrNA(BuildVersion))
 	fmt.Printf("Build date: %v\n", getValueOrNA(BuildDate))
@@ -143,13 +196,23 @@ func main() {
 			app.NewSimpleAPIHandler,
 			app.NewAPIHandler,
 			app.NewUserHandler,
+			app.NewInternalHandler,
+			app_grpc.NewShortenerService,
+			NewGRPCServer,
 			asReceiver(audit.NewFileReceiver),
 			asReceiver(audit.NewEndpointReceiver),
 		),
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: log}
 		}),
-		fx.Invoke(func(_ *http.Server, logger logger.Logger, shutdowner fx.Shutdowner) {
+		fx.Invoke(func(
+			_ *http.Server,
+			_ *grpc.Server,
+			configuration *config.Configuration,
+			logger logger.Logger,
+			shutdowner fx.Shutdowner,
+		) {
+			logger.Infof("Using configuration: %v", configuration)
 			connectToSignals(logger, shutdowner)
 		}),
 	).Run()

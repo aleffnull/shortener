@@ -20,6 +20,7 @@ type Connection interface {
 	Shutdown()
 	Ping(ctx context.Context) error
 	QueryRow(ctx context.Context, result any, sql string, args ...any) error
+	QueryRow2(ctx context.Context, result1 any, result2 any, sql string, args ...any) error
 	QueryRows(ctx context.Context, sql string, args ...any) (*sql.Rows, error)
 	Exec(ctx context.Context, sql string, args ...any) error
 	ExecTx(ctx context.Context, tx *sql.Tx, sql string, args ...any) error
@@ -99,6 +100,19 @@ func (c *connectionImpl) QueryRow(ctx context.Context, result any, sql string, a
 	err := c.db.QueryRowContext(ctx, sql, args...).Scan(result)
 	if err != nil {
 		return fmt.Errorf("connectionImpl.QueryRow, Row.Scan failed: %w", err)
+	}
+
+	return nil
+}
+
+func (c *connectionImpl) QueryRow2(ctx context.Context, result1 any, result2 any, sql string, args ...any) error {
+	if c.db == nil {
+		return nil
+	}
+
+	err := c.db.QueryRowContext(ctx, sql, args...).Scan(result1, result2)
+	if err != nil {
+		return fmt.Errorf("connectionImpl.QueryRow2, Row.Scan failed: %w", err)
 	}
 
 	return nil

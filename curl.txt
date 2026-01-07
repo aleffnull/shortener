@@ -5,6 +5,7 @@ ENABLE_HTTPS=1 CERTIFICATE_FILE=tls/server.crt KEY_FILE=tls/server.key make run
 CONFIG=config.json make run
 
 curl http://localhost:8080/ping -X GET -i
+curl http://localhost:8080/api/internal/stats -X GET -H "X-Real-IP: 192.168.1.42" -i
 
 curl http://localhost:8080 \
 	-X POST \
@@ -34,7 +35,7 @@ curl http://localhost:8080/api/shorten \
 curl http://localhost:8080/api/shorten \
 	-X POST \
 	-H "Content-Type: application/json; charset=utf-8" \
-	-H "Cookie: X-UserID=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTM3ODAxMzksIlVzZXJJRCI6Ijg1ZTM2YTlhLTg3NjQtNDA3OC04MGVlLTRjMjhmNTA5MWExMSJ9.O-OUyvitFhTmgOJVq7FXDzY0MJQ3Wbp0pwSacMr2Ip8;" \
+	-H "Cookie: X-UserID=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Njc2OTI3MzQsIlVzZXJJRCI6Ijk2NjM0MDBjLWMzM2UtNDI1Mi1iNzg0LTExODU3OGQ1OTc5YiJ9.2XDcOOPN5SksAEb6SqhupLmyiURUxxaaeg7UunW2940" \
 	-i \
 	-d "{\"url\": \"https://ya.ru/\"}"
 

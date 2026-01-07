@@ -13,25 +13,28 @@ import (
 )
 
 type Configuration struct {
-	ServerAddress string                      `env:"SERVER_ADDRESS" validate:"required,hostname_port"`
-	BaseURL       string                      `env:"BASE_URL" validate:"required,url"`
-	AuditFile     string                      `env:"AUDIT_FILE" validate:"omitempty,filepath"`
-	AuditURL      string                      `env:"AUDIT_URL" validate:"omitempty,url"`
-	MemoryStore   *MemoryStoreConfiguration   `validate:"required"`
-	FileStore     *FileStoreConfiguration     `validate:"required"`
-	DatabaseStore *DatabaseStoreConfiguration `validate:"required"`
-	HTTPS         *HTTPSConfiguration         `validate:"required"`
-	CPUProfile    string                      `env:"CPU_PROFILE" validate:"omitempty,filepath"`
-	MemoryProfile string                      `env:"MEMORY_PROFILE" validate:"omitempty,filepath"`
-	ConfigFile    string                      `env:"CONFIG"`
+	ServerAddress     string                      `env:"SERVER_ADDRESS" validate:"required,hostname_port"`
+	ServerAddressGRPC string                      `env:"SERVER_ADDRESS_GRPC" validate:"required,hostname_port"`
+	BaseURL           string                      `env:"BASE_URL" validate:"required,url"`
+	AuditFile         string                      `env:"AUDIT_FILE" validate:"omitempty,filepath"`
+	AuditURL          string                      `env:"AUDIT_URL" validate:"omitempty,url"`
+	MemoryStore       *MemoryStoreConfiguration   `validate:"required"`
+	FileStore         *FileStoreConfiguration     `validate:"required"`
+	DatabaseStore     *DatabaseStoreConfiguration `validate:"required"`
+	HTTPS             *HTTPSConfiguration         `validate:"required"`
+	CPUProfile        string                      `env:"CPU_PROFILE" validate:"omitempty,filepath"`
+	MemoryProfile     string                      `env:"MEMORY_PROFILE" validate:"omitempty,filepath"`
+	TrustedSubnet     string                      `env:"TRUSTED_SUBNET" validate:"omitempty,cidr"`
+	ConfigFile        string                      `env:"CONFIG"`
 }
 
 func (c *Configuration) String() string {
 	sb := &strings.Builder{}
 	fmt.Fprintf(
 		sb,
-		"&Configuration{ServerAddress:%v BaseURL:%v",
+		"&Configuration{ServerAddress:%v ServerAddressGRPC:%v BaseURL:%v",
 		c.ServerAddress,
+		c.ServerAddressGRPC,
 		c.BaseURL)
 
 	if len(c.AuditFile) > 0 {
@@ -74,6 +77,10 @@ func (c *Configuration) String() string {
 		fmt.Fprintf(sb, " HTTPS:%v", c.HTTPS)
 	}
 
+	if len(c.TrustedSubnet) > 0 {
+		fmt.Fprintf(sb, " TrustedSubnet:%v", c.TrustedSubnet)
+	}
+
 	if len(c.ConfigFile) > 0 {
 		fmt.Fprintf(sb, " ConfigFile:%v", c.ConfigFile)
 	}
@@ -95,11 +102,12 @@ func GetConfiguration() (*Configuration, error) {
 	}
 
 	configuration := &Configuration{
-		ServerAddress: getStringValue(envConfig.ServerAddress, flagConfig.ServerAddress, fileConfig.ServerAddress),
-		BaseURL:       getStringValue(envConfig.BaseURL, flagConfig.BaseURL, fileConfig.BaseURL),
-		AuditFile:     getStringValue(envConfig.AuditFile, flagConfig.AuditFile, fileConfig.AuditFile),
-		AuditURL:      getStringValue(envConfig.AuditURL, flagConfig.AuditURL, fileConfig.AuditURL),
-		MemoryStore:   defaultMemoryStoreConfiguration(),
+		ServerAddress:     getStringValue(envConfig.ServerAddress, flagConfig.ServerAddress, fileConfig.ServerAddress),
+		ServerAddressGRPC: getStringValue(envConfig.ServerAddressGRPC, flagConfig.ServerAddressGRPC, fileConfig.ServerAddressGRPC),
+		BaseURL:           getStringValue(envConfig.BaseURL, flagConfig.BaseURL, fileConfig.BaseURL),
+		AuditFile:         getStringValue(envConfig.AuditFile, flagConfig.AuditFile, fileConfig.AuditFile),
+		AuditURL:          getStringValue(envConfig.AuditURL, flagConfig.AuditURL, fileConfig.AuditURL),
+		MemoryStore:       defaultMemoryStoreConfiguration(),
 		FileStore: &FileStoreConfiguration{
 			FilePath: getStringValue(
 				envConfig.FileStore.FilePath,
@@ -128,6 +136,7 @@ func GetConfiguration() (*Configuration, error) {
 		},
 		CPUProfile:    getStringValue(envConfig.CPUProfile, flagConfig.CPUProfile, fileConfig.CPUProfile),
 		MemoryProfile: getStringValue(envConfig.MemoryProfile, flagConfig.MemoryProfile, fileConfig.MemoryProfile),
+		TrustedSubnet: getStringValue(envConfig.TrustedSubnet, flagConfig.TrustedSubnet, fileConfig.TrustedSubnet),
 	}
 
 	validate := validator.New(validator.WithRequiredStructEnabled())
@@ -147,6 +156,7 @@ func parseFlags() *Configuration {
 	}
 
 	flag.StringVar(&configuration.ServerAddress, "a", "localhost:8080", "address and port of running server")
+	flag.StringVar(&configuration.ServerAddressGRPC, "ag", "localhost:8181", "address and port of running GRPC server")
 	flag.StringVar(&configuration.BaseURL, "b", "http://localhost:8080", "short link base URL")
 	flag.StringVar(&configuration.AuditFile, "audit-file", "", "audit file path")
 	flag.StringVar(&configuration.AuditURL, "audit-url", "", "audit endpoint URL")
@@ -157,6 +167,7 @@ func parseFlags() *Configuration {
 	flag.StringVar(&configuration.HTTPS.KeyFile, "key-file", "", "HTTP key file")
 	flag.StringVar(&configuration.CPUProfile, "cpu-profile", "", "path to CPU profile file")
 	flag.StringVar(&configuration.MemoryProfile, "memory-profile", "", "path to memory profile file")
+	flag.StringVar(&configuration.TrustedSubnet, "t", "", "trusted subnet CIDR")
 	flag.StringVar(&configuration.ConfigFile, "config", "", "path to configuration file")
 	flag.Parse()
 
@@ -195,10 +206,11 @@ func parseFile(envConfig *Configuration, flagConfig *Configuration) (*Configurat
 	}
 
 	configuration := &Configuration{
-		ServerAddress: configurationFile.ServerAddress,
-		BaseURL:       configurationFile.BaseURL,
-		AuditFile:     configurationFile.AuditFile,
-		AuditURL:      configurationFile.AuditURL,
+		ServerAddress:     configurationFile.ServerAddress,
+		ServerAddressGRPC: configurationFile.ServerAddressGRPC,
+		BaseURL:           configurationFile.BaseURL,
+		AuditFile:         configurationFile.AuditFile,
+		AuditURL:          configurationFile.AuditURL,
 		FileStore: &FileStoreConfiguration{
 			FilePath: configurationFile.FileStoreFilePath,
 		},
@@ -212,6 +224,7 @@ func parseFile(envConfig *Configuration, flagConfig *Configuration) (*Configurat
 		},
 		CPUProfile:    configurationFile.CPUProfile,
 		MemoryProfile: configurationFile.MemoryProfile,
+		TrustedSubnet: configurationFile.TrustedSubnet,
 	}
 
 	return configuration, nil

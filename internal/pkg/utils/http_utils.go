@@ -20,3 +20,8 @@ func HandleUnauthorized(response http.ResponseWriter, message string, logger log
 	logger.Warnf("Unauthorized access: %v", message)
 	http.Error(response, "Unauthorized", http.StatusUnauthorized)
 }
+
+func HandleForbidden(response http.ResponseWriter, message string, logger logger.Logger) {
+	logger.Warnf("Access forbidden: %v", message)
+	http.Error(response, "Forbidden", http.StatusForbidden)
+}

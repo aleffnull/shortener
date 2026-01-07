@@ -189,3 +189,15 @@ func (s *ShortenerApp) CheckStore(ctx context.Context) error {
 
 	return nil
 }
+
+func (s *ShortenerApp) GetStatistics(ctx context.Context) (*models.Statistics, error) {
+	urlsCount, usersCount, err := s.storage.GetStatistics(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("GetStatistics, storage.GetStatistics failed: %w", err)
+	}
+
+	return &models.Statistics{
+		UrlsCount:  urlsCount,
+		UsersCount: usersCount,
+	}, nil
+}

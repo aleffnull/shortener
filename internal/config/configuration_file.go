@@ -2,6 +2,7 @@ package config
 
 type ConfigurationFile struct {
 	ServerAddress               string `json:"server_address"`
+	ServerAddressGRPC           string `json:"server_address_grpc"`
 	BaseURL                     string `json:"base_url"`
 	AuditFile                   string `json:"audit_file"`
 	AuditURL                    string `json:"audit_url"`
@@ -12,4 +13,5 @@ type ConfigurationFile struct {
 	HTTPSKeyFile                string `json:"https_key_file"`
 	CPUProfile                  string `json:"cpu_profile"`
 	MemoryProfile               string `json:"memory_profile"`
+	TrustedSubnet               string `json:"trusted_subnet"`
 }

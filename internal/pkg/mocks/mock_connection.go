@@ -140,6 +140,25 @@ func (mr *MockConnectionMockRecorder) QueryRow(ctx, result, arg2 any, args ...an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryRow", reflect.TypeOf((*MockConnection)(nil).QueryRow), varargs...)
 }
 
+// QueryRow2 mocks base method.
+func (m *MockConnection) QueryRow2(ctx context.Context, result1, result2 any, arg3 string, args ...any) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, result1, result2, arg3}
+	for _, a := range args {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "QueryRow2", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// QueryRow2 indicates an expected call of QueryRow2.
+func (mr *MockConnectionMockRecorder) QueryRow2(ctx, result1, result2, arg3 any, args ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, result1, result2, arg3}, args...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryRow2", reflect.TypeOf((*MockConnection)(nil).QueryRow2), varargs...)
+}
+
 // QueryRows mocks base method.
 func (m *MockConnection) QueryRows(ctx context.Context, arg1 string, args ...any) (*sql.Rows, error) {
 	m.ctrl.T.Helper()

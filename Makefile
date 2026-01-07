@@ -72,7 +72,7 @@ docs:
 
 calc_coverage:
 	go test ./... -coverprofile cover.out.tmp
-	cat cover.out.tmp | grep -v "mock" > cover.out
+	cat cover.out.tmp | grep -v "mock" | grep -v ".pb.go" > cover.out
 	rm cover.out.tmp
 
 coverage: calc_coverage
@@ -87,3 +87,9 @@ lint: build_linter
 generate: build_resetter
 	bin/resetter .
 
+proto:
+	mkdir -p internal/pkg/pb
+	protoc \
+		--go_out=internal/pkg/pb \
+		--go-grpc_out=internal/pkg/pb \
+		api/shortener/shortener.proto

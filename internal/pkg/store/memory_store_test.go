@@ -384,3 +384,22 @@ func TestMemoryStore_DeleteBatch(t *testing.T) {
 	err := store.DeleteBatch(context.Background(), []string{}, uuid.New())
 	require.NoError(t, err)
 }
+
+func TestMemoryStore_GetStatistics(t *testing.T) {
+	t.Parallel()
+
+	// Arrange.
+	ctrl := gomock.NewController(t)
+	mock := mocks.NewMock(ctrl)
+
+	configuration := &config.Configuration{
+		MemoryStore: &config.MemoryStoreConfiguration{},
+	}
+	store := NewMemoryStore(mock.ColdStore, configuration, mock.Logger)
+
+	// Act-assert.
+	urlsCount, usersCount, err := store.GetStatistics(context.Background())
+	require.Zero(t, urlsCount)
+	require.Zero(t, usersCount)
+	require.NoError(t, err)
+}

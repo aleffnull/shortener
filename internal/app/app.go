@@ -17,4 +17,5 @@ type App interface {
 	ShortenURLBatch(context.Context, []*models.ShortenBatchRequestItem, uuid.UUID) ([]*models.ShortenBatchResponseItem, error)
 	DeleteURLs([]string, uuid.UUID)
 	CheckStore(context.Context) error
+	GetStatistics(context.Context) (*models.Statistics, error)
 }

@@ -22,6 +22,7 @@ type DataStore interface {
 	Save(context.Context, string, uuid.UUID) (string, error)
 	SaveBatch(context.Context, []*domain.BatchRequestItem, uuid.UUID) ([]*domain.BatchResponseItem, error)
 	DeleteBatch(context.Context, []string, uuid.UUID) error
+	GetStatistics(context.Context) (int, int, error)
 }
 
 type Store interface {

@@ -108,6 +108,22 @@ func (mr *MockDataStoreMockRecorder) DeleteBatch(arg0, arg1, arg2 any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBatch", reflect.TypeOf((*MockDataStore)(nil).DeleteBatch), arg0, arg1, arg2)
 }
 
+// GetStatistics mocks base method.
+func (m *MockDataStore) GetStatistics(arg0 context.Context) (int, int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetStatistics", arg0)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetStatistics indicates an expected call of GetStatistics.
+func (mr *MockDataStoreMockRecorder) GetStatistics(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStatistics", reflect.TypeOf((*MockDataStore)(nil).GetStatistics), arg0)
+}
+
 // Load mocks base method.
 func (m *MockDataStore) Load(arg0 context.Context, arg1 string) (*domain.URLItem, error) {
 	m.ctrl.T.Helper()
@@ -218,6 +234,22 @@ func (m *MockStore) DeleteBatch(arg0 context.Context, arg1 []string, arg2 uuid.U
 func (mr *MockStoreMockRecorder) DeleteBatch(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBatch", reflect.TypeOf((*MockStore)(nil).DeleteBatch), arg0, arg1, arg2)
+}
+
+// GetStatistics mocks base method.
+func (m *MockStore) GetStatistics(arg0 context.Context) (int, int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetStatistics", arg0)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetStatistics indicates an expected call of GetStatistics.
+func (mr *MockStoreMockRecorder) GetStatistics(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStatistics", reflect.TypeOf((*MockStore)(nil).GetStatistics), arg0)
 }
 
 // Init mocks base method.
