@@ -4,7 +4,7 @@ create table app_parameters(
 );
 
 insert into app_parameters values(
-    'jwt_signing_key', md5(random()::text)
+    'jwt_signing_key', '50db3642a43bc2af1635eb0c21edd092'
 );
 
 alter table urls add column user_id text;
